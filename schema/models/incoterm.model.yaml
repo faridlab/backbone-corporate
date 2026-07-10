@@ -1,0 +1,84 @@
+# =============================================================================
+# Domain: Corporate (reference masters)
+# Entity: Incoterm + TermsAndConditions
+# Description: Two thin reference masters cited by selling/buying as logical FKs.
+# Incoterm — the ICC delivery term (FOB, CIF, …) stamped on an order/shipment.
+# TermsAndConditions — a reusable named T&C block printed on quotes/orders/invoices.
+# Region-neutral; no behavior beyond being referenced.
+# =============================================================================
+
+models:
+  - name: Incoterm
+    collection: incoterms
+    description: "An ICC Incoterm (delivery term)"
+
+    fields:
+      id:
+        type: uuid
+        attributes: ["@id", "@default(uuid)"]
+        description: "Unique incoterm identifier"
+
+      code:
+        type: string
+        attributes: ["@required", "@max(8)"]
+        description: "The 3-letter Incoterm code (FOB, CIF, DDP, …) — unique"
+
+      name:
+        type: string
+        attributes: ["@required", "@max(120)"]
+        description: "Full term name"
+
+      is_active:
+        type: bool
+        attributes: ["@default(true)"]
+        description: "Whether the term may be selected on new documents"
+
+      metadata:
+        type: Metadata
+        attributes: ["@audit_metadata"]
+        description: "Audit metadata (created_at, updated_at, deleted_at, created_by, updated_by, deleted_by)"
+
+    indexes:
+      - type: unique
+        fields: [code]
+        where: "deleted_at IS NULL"
+
+  - name: TermsAndConditions
+    collection: terms_and_conditions
+    description: "A reusable named terms-and-conditions block"
+
+    fields:
+      id:
+        type: uuid
+        attributes: ["@id", "@default(uuid)"]
+        description: "Unique T&C identifier"
+
+      code:
+        type: string
+        attributes: ["@required", "@max(40)"]
+        description: "Short unique code"
+
+      title:
+        type: string
+        attributes: ["@required", "@max(150)"]
+        description: "Human title (e.g. 'Standard Sales Terms')"
+
+      body:
+        type: string
+        attributes: ["@required", "@max(8000)"]
+        description: "The full T&C text (printed on quotes/orders/invoices)"
+
+      is_active:
+        type: bool
+        attributes: ["@default(true)"]
+        description: "Whether the block may be attached to new documents"
+
+      metadata:
+        type: Metadata
+        attributes: ["@audit_metadata"]
+        description: "Audit metadata (created_at, updated_at, deleted_at, created_by, updated_by, deleted_by)"
+
+    indexes:
+      - type: unique
+        fields: [code]
+        where: "deleted_at IS NULL"

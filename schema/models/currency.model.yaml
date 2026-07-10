@@ -1,0 +1,109 @@
+# =============================================================================
+# Domain: Corporate (reference masters)
+# Entity: Currency + CurrencyExchange
+# Description: The money master and the effective-dated FX rate table — the
+# multi-currency prerequisite selling/buying/accounting cite as logical FKs.
+# A rate is directional (base → quote) and effective-dated so a rate change
+# coexists with history without editing it. The engine picks the rate effective
+# on the transaction date; overlapping windows for one directed pair are the
+# maturity invariant (a rate must be unambiguous). Region-neutral.
+# =============================================================================
+
+models:
+  - name: Currency
+    collection: currencies
+    description: "ISO 4217 currency (the money master)"
+
+    fields:
+      id:
+        type: uuid
+        attributes: ["@id", "@default(uuid)"]
+        description: "Unique currency identifier"
+
+      iso_code:
+        type: string
+        attributes: ["@required", "@max(3)"]
+        description: "ISO 4217 alphabetic code (e.g. IDR, USD) — unique"
+
+      name:
+        type: string
+        attributes: ["@required", "@max(80)"]
+        description: "Currency name (e.g. Indonesian Rupiah)"
+
+      symbol:
+        type: string?
+        attributes: ["@max(8)"]
+        description: "Display symbol (e.g. Rp, $)"
+
+      decimal_places:
+        type: int
+        attributes: ["@default(2)"]
+        description: "Minor-unit precision (IDR uses 0, USD 2) — how the amount is rounded/displayed"
+
+      is_active:
+        type: bool
+        attributes: ["@default(true)"]
+        description: "Whether the currency may be used on new transactions"
+
+      metadata:
+        type: Metadata
+        attributes: ["@audit_metadata"]
+        description: "Audit metadata (created_at, updated_at, deleted_at, created_by, updated_by, deleted_by)"
+
+    indexes:
+      - type: unique
+        fields: [iso_code]
+        where: "deleted_at IS NULL"
+      - type: index
+        fields: [is_active]
+
+  - name: CurrencyExchange
+    collection: currency_exchanges
+    description: "An effective-dated directional FX rate: 1 from_currency = rate quote-currency"
+
+    fields:
+      id:
+        type: uuid
+        attributes: ["@id", "@default(uuid)"]
+        description: "Unique rate identifier"
+
+      company_id:
+        type: uuid?
+        attributes: ["@exclude_from_foreign_key_check"]
+        description: "Books owner # logical FK to organization.Company.id; null = a global/default rate"
+
+      from_currency:
+        type: string
+        attributes: ["@required", "@max(3)"]
+        description: "Base currency ISO code (the '1 unit of' side)"
+
+      to_currency:
+        type: string
+        attributes: ["@required", "@max(3)"]
+        description: "Quote currency ISO code (the amount side)"
+
+      rate:
+        type: decimal
+        attributes: ["@required", "@precision(20,10)", "@non_negative"]
+        description: "Units of to_currency per 1 from_currency (e.g. USD→IDR = 16250.0000000000)"
+
+      effective_from:
+        type: date
+        attributes: ["@required"]
+        description: "Rate effective from (inclusive)"
+
+      effective_to:
+        type: date?
+        description: "Rate effective to (inclusive); null = open-ended (the current rate)"
+
+      metadata:
+        type: Metadata
+        attributes: ["@audit_metadata"]
+        description: "Audit metadata (created_at, updated_at, deleted_at, created_by, updated_by, deleted_by)"
+
+    indexes:
+      # The lookup: pick the row for a directed pair effective on the transaction date.
+      - type: index
+        fields: [from_currency, to_currency, effective_from]
+      - type: index
+        fields: [company_id]

@@ -1,0 +1,51 @@
+# =============================================================================
+# Domain: Corporate (reference masters)
+# Entity: Territory
+# Description: Sales/geography territory dimension — a tree (parent_id), cited by
+# selling/CRM as a logical FK for territory-based pricing, targets, and reporting.
+# Region-neutral (an ERPNext Territory analogue); NOT the administrative wilayah
+# (that is backbone-geo) — this is the commercial hierarchy the business defines.
+# =============================================================================
+
+models:
+  - name: Territory
+    collection: territories
+    description: "A commercial sales territory (tree)"
+
+    fields:
+      id:
+        type: uuid
+        attributes: ["@id", "@default(uuid)"]
+        description: "Unique territory identifier"
+
+      code:
+        type: string
+        attributes: ["@required", "@max(40)"]
+        description: "Short unique code"
+
+      name:
+        type: string
+        attributes: ["@required", "@max(120)"]
+        description: "Territory name"
+
+      parent_id:
+        type: uuid?
+        attributes: ["@foreign_key(Territory.id)"]
+        description: "Parent territory (null = a root); the tree the business defines"
+
+      is_group:
+        type: bool
+        attributes: ["@default(false)"]
+        description: "A grouping node (has children) vs a leaf a transaction can reference"
+
+      metadata:
+        type: Metadata
+        attributes: ["@audit_metadata"]
+        description: "Audit metadata (created_at, updated_at, deleted_at, created_by, updated_by, deleted_by)"
+
+    indexes:
+      - type: unique
+        fields: [code]
+        where: "deleted_at IS NULL"
+      - type: index
+        fields: [parent_id]

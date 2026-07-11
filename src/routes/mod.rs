@@ -12,10 +12,15 @@ use std::sync::Arc;
 // Import handlers
 use crate::presentation::http::{
     create_currency_routes,
+    create_currency_read_routes,
     create_currency_exchange_routes,
+    create_currency_exchange_read_routes,
     create_incoterm_routes,
+    create_incoterm_read_routes,
     create_terms_and_conditions_routes,
-    create_territory_routes
+    create_terms_and_conditions_read_routes,
+    create_territory_routes,
+    create_territory_read_routes
 };
 
 // Import AppState for stateful routes
@@ -44,6 +49,20 @@ pub fn create_stateless_routes(module: &crate::CorporateModule) -> Router<()> {
         .merge(create_incoterm_routes(module.incoterm_service.clone()))
         .merge(create_terms_and_conditions_routes(module.terms_and_conditions_service.clone()))
         .merge(create_territory_routes(module.territory_service.clone()))
+}
+
+/// Read-only routes for the Corporate module — every entity mounted READ-ONLY (the guarded base).
+///
+/// The generic `create_stateless_routes` exposes full mutable CRUD with no domain
+/// validation; this exposes only reads, so generic mutation can't bypass a write
+/// service's invariants. Extend it: `create_readonly_corporate_routes(m).merge(my_validated_writes)`.
+pub fn create_readonly_corporate_routes(module: &crate::CorporateModule) -> Router<()> {
+    Router::new()
+        .merge(create_currency_read_routes(module.currency_service.clone()))
+        .merge(create_currency_exchange_read_routes(module.currency_exchange_service.clone()))
+        .merge(create_incoterm_read_routes(module.incoterm_service.clone()))
+        .merge(create_terms_and_conditions_read_routes(module.terms_and_conditions_service.clone()))
+        .merge(create_territory_read_routes(module.territory_service.clone()))
 }
 
 /// Get all routes (stateless) for the Corporate module.

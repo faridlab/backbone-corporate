@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS corporate.currency_exchanges (
     company_id UUID,
     from_currency TEXT NOT NULL,
     to_currency TEXT NOT NULL,
-    rate NUMERIC NOT NULL,
+    rate NUMERIC(20, 10) NOT NULL CHECK (rate >= 0),
     effective_from DATE NOT NULL,
     effective_to DATE,
     metadata JSONB NOT NULL DEFAULT '{"created_at":null,"updated_at":null,"deleted_at":null,"created_by":null,"updated_by":null,"deleted_by":null}'::jsonb,

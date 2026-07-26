@@ -8,7 +8,10 @@
 mod common;
 use common::*;
 
+use std::sync::Arc;
+
 use backbone_accounting::application::service::posting_service::{PostingLine, PostingRequest, PostingService};
+use backbone_accounting::infrastructure::persistence::SqlxPostingRepository;
 use backbone_corporate::application::service::fx_service::*;
 use rust_decimal::Decimal;
 use uuid::Uuid;
@@ -52,7 +55,7 @@ async fn fxseam1_converted_foreign_bill_posts_balanced() {
     // …and books it in the REAL ledger, in the functional currency, balanced.
     let expense = account(&pool, company, "6100-COR", "expense", "operating_expense", "debit").await;
     let ap = account(&pool, company, "2100-COR", "liability", "accounts_payable", "credit").await;
-    let svc = PostingService::new(pool.clone());
+    let svc = PostingService::new(Arc::new(SqlxPostingRepository::new(pool.clone())));
     let mut req = PostingRequest::original(company, "manual", Uuid::new_v4(), d(2026, 6, 1));
     req.source_reference = Some(format!("USD bill @ {}", converted.rate));
     req.lines = vec![

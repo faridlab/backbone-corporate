@@ -14,8 +14,12 @@
 
 use chrono::NaiveDate;
 use rust_decimal::{Decimal, RoundingStrategy};
-use sqlx::{PgPool, Row};
+use sqlx::PgPool;
 use uuid::Uuid;
+
+use crate::infrastructure::persistence::{
+    CurrencyExchangeRepository, CurrencyRepository, NewCurrencyExchangeRow,
+};
 
 #[derive(Debug, thiserror::Error)]
 pub enum FxError {
@@ -90,38 +94,23 @@ impl FxService {
         // accepts the row). A NULL company_id (a GLOBAL rate) is NOT bound here: the currency_exchanges
         // policy writes own-only, so a global rate must be created via the admin/bypass path. Binding
         // would let a tenant forge a global rate, which is exactly what the fence exists to prevent.
-        //
-        // `set_config(_, _, true)` is transaction-local, so the setting is discarded on commit/rollback
-        // and can never ride a pooled connection into the next request.
         if let Some(company) = r.company_id {
-            bind_company_tx(&mut *tx, company).await?;
+            crate::infrastructure::persistence::bind_company_tx(&mut *tx, company).await?;
         }
-        // Overlap check within the same company scope. Two windows [a1,b1] and [a2,b2] overlap iff
-        // a1 <= b2 AND a2 <= b1, with a null end treated as +infinity.
-        let overlap: Option<Uuid> = sqlx::query_scalar(
-            r#"SELECT id FROM corporate.currency_exchanges
-               WHERE from_currency=$1 AND to_currency=$2
-                 AND company_id IS NOT DISTINCT FROM $3
-                 AND (metadata->>'deleted_at') IS NULL
-                 AND effective_from <= COALESCE($5, DATE '9999-12-31')
-                 AND $4 <= COALESCE(effective_to, DATE '9999-12-31')
-               LIMIT 1"#,
-        )
-        .bind(&from).bind(&to).bind(r.company_id).bind(r.effective_from).bind(r.effective_to)
-        .fetch_optional(&mut *tx).await?;
+        let exchanges = CurrencyExchangeRepository::new(self.pool.clone());
+        // Overlap check within the same company scope (see CurrencyExchangeRepository::find_overlap_tx).
+        let overlap = exchanges
+            .find_overlap_tx(&mut *tx, &from, &to, r.company_id, r.effective_from, r.effective_to)
+            .await?;
         if overlap.is_some() {
             return Err(FxError::OverlappingWindow { from, to });
         }
 
         let id = Uuid::new_v4();
-        sqlx::query(
-            r#"INSERT INTO corporate.currency_exchanges
-                 (id, company_id, from_currency, to_currency, rate, effective_from, effective_to)
-               VALUES ($1,$2,$3,$4,$5,$6,$7)"#,
-        )
-        .bind(id).bind(r.company_id).bind(&from).bind(&to).bind(r.rate)
-        .bind(r.effective_from).bind(r.effective_to)
-        .execute(&mut *tx).await?;
+        exchanges.insert_rate_tx(&mut *tx, &NewCurrencyExchangeRow {
+            id, company_id: r.company_id, from_currency: from.clone(), to_currency: to.clone(),
+            rate: r.rate, effective_from: r.effective_from, effective_to: r.effective_to,
+        }).await?;
         tx.commit().await?;
         Ok(id)
     }
@@ -155,15 +144,21 @@ impl FxService {
         // only the global rows (USING `company_id IS NULL`).
         let mut tx = self.pool.begin().await?;
         if let Some(company) = company_id {
-            bind_company_tx(&mut *tx, company).await?;
+            crate::infrastructure::persistence::bind_company_tx(&mut *tx, company).await?;
         }
 
-        let dp = decimal_places_on(&mut *tx, &to).await?;
+        let exchanges = CurrencyExchangeRepository::new(self.pool.clone());
+        let currencies = CurrencyRepository::new(self.pool.clone());
+
+        let dp = match currencies.decimal_places_tx(&mut *tx, &to).await? {
+            Some(v) => v.max(0) as u32,
+            None => return Err(FxError::UnknownCurrency(to)),
+        };
 
         // Direct lookup: prefer a company rate over a global one, then the most recently-effective window.
         // Deterministic — overlap is prevented on write, so at most one window per scope covers the date;
         // the ORDER BY only chooses between company vs global.
-        if let Some((rate, rate_id)) = lookup_rate_on(&mut *tx, &from, &to, on_date).await? {
+        if let Some((rate, rate_id)) = exchanges.find_effective_rate_tx(&mut *tx, &from, &to, on_date).await? {
             let converted = (amount * rate).round_dp_with_strategy(dp, RoundingStrategy::MidpointAwayFromZero);
             tx.commit().await?;
             return Ok(Converted { amount: converted, rate, rate_id: Some(rate_id), rate_date: on_date, inverse: false });
@@ -174,7 +169,7 @@ impl FxService {
         // registered row (rate_id points at the forward row) rather than a separately-registered inverse
         // that would drift from it. This is the narrow reversal case — NOT a generic bidirectional market
         // convert.
-        if let Some((fwd_rate, fwd_id)) = lookup_rate_on(&mut *tx, &to, &from, on_date).await? {
+        if let Some((fwd_rate, fwd_id)) = exchanges.find_effective_rate_tx(&mut *tx, &to, &from, on_date).await? {
             let rate = Decimal::ONE / fwd_rate;
             let converted = (amount / fwd_rate).round_dp_with_strategy(dp, RoundingStrategy::MidpointAwayFromZero);
             tx.commit().await?;
@@ -186,58 +181,9 @@ impl FxService {
     }
 }
 
-/// Bind `company` onto `conn` transaction-local via `set_config('app.company_id', ..., true)` — the
-/// `true` scopes the setting to the surrounding transaction, so it is discarded on commit/rollback and
-/// cannot leak onto a pooled connection reused by the next request. This is the same fence the ORM's
-/// `company_scope::bind_company_on` applies; it is inlined here because the framework `main` pin this
-/// crate resolves against does not yet export that module (ADR-0008 follow-up — switch to
-/// `backbone_orm::company_scope::bind_company_on` once the framework release propagates).
-async fn bind_company_tx(conn: &mut sqlx::PgConnection, company: Uuid) -> Result<(), FxError> {
-    sqlx::query("SELECT set_config('app.company_id', $1, true)")
-        .bind(company.to_string())
-        .execute(conn)
-        .await?;
-    Ok(())
-}
-
-/// The effective rate (+ its row id) for a directed pair on a date, or None. Company scope wins over
-/// global; among a scope the most recent window wins (overlap is prevented on write). Runs on `conn`
-/// (a transaction that already carries `app.company_id` when scoped); the SQL predicate keeps the
-/// company-wins-over-global ordering explicit on the application side as defense-in-depth.
-async fn lookup_rate_on(
-    conn: &mut sqlx::PgConnection,
-    from: &str,
-    to: &str,
-    on_date: NaiveDate,
-) -> Result<Option<(Decimal, Uuid)>, FxError> {
-    let row = sqlx::query(
-        r#"SELECT id, rate FROM corporate.currency_exchanges
-           WHERE from_currency=$1 AND to_currency=$2
-             AND (company_id IS NOT DISTINCT FROM NULLIF(current_setting('app.company_id', true), '')::uuid
-                  OR company_id IS NULL)
-             AND (metadata->>'deleted_at') IS NULL
-             AND effective_from <= $3
-             AND (effective_to IS NULL OR effective_to >= $3)
-           ORDER BY (company_id IS NOT NULL) DESC, effective_from DESC
-           LIMIT 1"#,
-    )
-    .bind(from).bind(to).bind(on_date)
-    .fetch_optional(conn).await?;
-    Ok(row.map(|r| (r.get::<Decimal, _>("rate"), r.get::<Uuid, _>("id"))))
-}
-
-/// The quote currency's minor-unit precision (IDR=0, USD=2). Errors on an unknown or soft-deleted
-/// currency rather than silently defaulting to 2 dp — a deleted or typo'd code would otherwise
-/// mis-round monetary amounts (ADR-001 parking lot). Runs on `conn` because the caller already opened
-/// the scoped transaction; `corporate.currencies` is NOT itself company-fenced.
-async fn decimal_places_on(conn: &mut sqlx::PgConnection, iso: &str) -> Result<u32, FxError> {
-    let dp: Option<i32> = sqlx::query_scalar(
-        "SELECT decimal_places FROM corporate.currencies WHERE iso_code=$1 AND (metadata->>'deleted_at') IS NULL")
-        .bind(iso).fetch_optional(conn).await?;
-    dp.map(|v| v.max(0) as u32)
-        .ok_or_else(|| FxError::UnknownCurrency(iso.to_string()))
-}
-
+// (bind_company_tx / lookup_rate_on / decimal_places_on used to live here as inlined SQL. They moved
+// into CurrencyExchangeRepository / CurrencyRepository, and the company bind now uses the framework's
+// backbone_orm::company_scope::bind_company_on — the service no longer holds SQL.)
 fn norm(iso: &str) -> Result<String, FxError> {
     let t = iso.trim().to_uppercase();
     if t.len() < 3 || t.len() > 3 {

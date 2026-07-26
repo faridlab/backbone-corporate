@@ -13,6 +13,10 @@
 user_owned:
   # The hand-authored FX conversion engine (effective-dated rate lookup + no-overlap guard).
   - "src/application/service/fx_service.rs"
+  # User-owned repositories holding the FX engine's hand-written SQL (overlap check, rate insert,
+  # effective-rate lookup, decimal-places read). Same pattern as backbone-pos/banking.
+  - "src/infrastructure/persistence/currency_exchange_repository.rs"
+  - "src/infrastructure/persistence/currency_repository.rs"
 
   # Behavior tests (the golden cases / oracle) + BDD features.
   - "tests/features/**"

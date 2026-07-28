@@ -30,5 +30,5 @@ pub use backbone_orm::repository::{
 
 // Re-export custom persistence types
 // <<< CUSTOM
-pub use currency_exchange_repository::{bind_company_tx, NewCurrencyExchangeRow};
+pub use currency_exchange_repository::NewCurrencyExchangeRow;
 // END CUSTOM

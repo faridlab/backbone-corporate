@@ -42,17 +42,12 @@ impl CurrencyExchangeRepository {
 /// `true` scopes the setting to the surrounding transaction, so it is discarded on commit/rollback and
 /// cannot leak onto a pooled connection reused by the next request.
 ///
-/// This is corporate's local equivalent of the ORM's `company_scope::bind_company_on` (ADR-0008
-/// follow-up: switch to the framework helper once this crate's `backbone-orm` pin propagates a release
-/// that exports `company_scope`). It lives in the persistence layer — not the service — so the service
-/// holds no SQL (4-layer rule).
-pub async fn bind_company_tx(conn: &mut PgConnection, company: Uuid) -> Result<(), sqlx::Error> {
-    sqlx::query("SELECT set_config('app.company_id', $1, true)")
-        .bind(company.to_string())
-        .execute(conn)
-        .await?;
-    Ok(())
-}
+/// (ADR-0008 follow-up done: the service now calls the framework's
+/// `backbone_orm::company_scope::bind_company_on` directly. corporate's local copy was byte-identical
+/// to the framework helper — same `SELECT set_config('app.company_id', $1, true)` — so this thin
+/// wrapper was removed to keep one source of truth. The `set_config` SQL itself still lives in the
+/// framework's persistence layer, not corporate's service, so the 4-layer rule holds.)
+
 
 /// The exact row an FX-rate insert writes.
 pub struct NewCurrencyExchangeRow {

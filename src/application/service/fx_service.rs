@@ -95,7 +95,7 @@ impl FxService {
         // policy writes own-only, so a global rate must be created via the admin/bypass path. Binding
         // would let a tenant forge a global rate, which is exactly what the fence exists to prevent.
         if let Some(company) = r.company_id {
-            crate::infrastructure::persistence::bind_company_tx(&mut *tx, company).await?;
+            backbone_orm::company_scope::bind_company_on(&mut *tx, company).await?;
         }
         let exchanges = CurrencyExchangeRepository::new(self.pool.clone());
         // Overlap check within the same company scope (see CurrencyExchangeRepository::find_overlap_tx).
@@ -144,7 +144,7 @@ impl FxService {
         // only the global rows (USING `company_id IS NULL`).
         let mut tx = self.pool.begin().await?;
         if let Some(company) = company_id {
-            crate::infrastructure::persistence::bind_company_tx(&mut *tx, company).await?;
+            backbone_orm::company_scope::bind_company_on(&mut *tx, company).await?;
         }
 
         let exchanges = CurrencyExchangeRepository::new(self.pool.clone());

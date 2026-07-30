@@ -43,15 +43,38 @@ read it.
   `backbone-accounting` (a converted bill posts balanced); survives regen (§5).
 
 ## Parking lot (each with a gate)
+
+_Updated 2026-07-31 by the maturity-council follow-up (see
+`docs/council/2026-07-31-module-backbone-corporate-maturity.md`). The council graded the FX engine 5/5
+on correctness but the module contract 2/5 — the headline capability was reachable only by importing
+`application::service::fx_service` directly. The items below were re-verified against the actual code;
+the stale ones corrected and the contract gap closed by publishing `CorporateFxPort` and wiring
+`FxService` into `CorporateModule`._
+
 - **A zero/negative rate through the CRUD stack silently zeroed or flipped a converted amount** — FIXED
   (maturity council 2026-07-12): `CHECK (rate > 0)` at the DB (FIP-5, proven-by-revert).
 - **A foreign-currency refund had no way to un-book the exact stamped rate** — FIXED (completeness council
   2026-07-12): the inverse fallback reciprocates the same forward row (FGC-6, proven-by-revert).
-- **Unknown/soft-deleted quote currency defaults to 2 dp** in `decimal_places` — a deleted IDR row would
-  mis-round to 2 places. Gate: a currency-active check on `convert`, or a NOT-NULL FK from the rate to a
-  live currency.
-- **`rate NUMERIC` unbounded scale** — `amount × rate` could exceed rust_decimal's 28-digit envelope for
-  very large IDR figures. Gate: emit the schema's `@precision(20,10)` scale to DDL.
+- **A soft-deleted quote currency broke historical conversion** — FIXED (maturity council 2026-07-31). The
+  2026-07-12 note ("defaults to 2 dp") was stale: `decimal_places_tx` actually filtered
+  `(metadata->>'deleted_at') IS NULL`, so `convert` errored `UnknownCurrency` once the quote currency was
+  retired — violating Decision 1. The filter is dropped; precision is read regardless of soft-delete, so a
+  retired currency still rounds history (FIP-6). A never-registered code still errors.
+- **`amount × rate` overflow** — FIXED (maturity council 2026-07-31). The `@precision(20,10)`-to-DDL gate
+  was already met (the column is `NUMERIC(20,10) NOT NULL`), but the Rust-side `amount * rate` used naive
+  `*`/`/` that panic past `rust_decimal`'s 28-digit envelope on large IDR figures. `convert` now uses
+  `checked_mul`/`checked_div` → `FxError::Overflow` (FGC-7; maps to HTTP 422).
+- **CurrencyExchange regenability** — RESOLVED. `CurrencyExchange` is defined in
+  `schema/models/currency.model.yaml`; its repo is `user_owned`. The scaffolding is regenerable — no
+  missing-model concern.
+- **Module contract** — FIXED (maturity council 2026-07-31). The FX capability is now reachable through
+  the published `CorporateFxPort` (`CorporateModule::fx_port()`), and the validated write/convert throat is
+  `POST /fx/rates` + `POST /fx/convert`. The default `create_stateless_routes` mounts the rate table
+  read-only; full write CRUD is opt-in via `all_crud_routes()` (trusted/admin).
+- **Generic CRUD write on the rate table** — MITIGATED, not removed. The default composer mounts the rate
+  table read-only and `POST /fx/rates` is the validated throat, but the unguarded `all_crud_routes()`
+  still exposes full write CRUD (the DB EXCLUDE/CHECK backstops money-correctness). Gate: a codegen
+  template change so the generator never emits write CRUD on the rate table by default.
 - **Revaluation / consolidation reporting** hits the same missing-direction shape at scale, but no such
   reporting consumer is built — speculative where the refund path is concrete. Gate: a
   reporting/consolidation module.

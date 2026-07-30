@@ -22,6 +22,9 @@ user_owned:
   # AppState has no CUSTOM marker, so the file is hand-maintained (same escape
   # hatch as fx_service.rs above).
   - "src/handlers/mod.rs"
+  # Rate-table routes default to READ-only and the validated /fx endpoints mount
+  # from the CUSTOM block; the stateless composer is hand-edited, so user-own it.
+  - "src/routes/mod.rs"
 
   # Behavior tests (the golden cases / oracle) + BDD features.
   - "tests/features/**"

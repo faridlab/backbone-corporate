@@ -204,11 +204,4 @@ impl crate::CorporateModule {
     pub fn fx_port(&self) -> std::sync::Arc<dyn crate::exports::CorporateFxPort> {
         std::sync::Arc::new(crate::exports::CorporateFxServiceImpl::new(self.fx_service.clone()))
     }
-
-    /// The concrete FX engine — for in-crate handlers that need the typed
-    /// `FxError` (to map it to HTTP status codes). External modules should
-    /// prefer [`Self::fx_port`].
-    pub(crate) fn fx(&self) -> std::sync::Arc<FxService> {
-        self.fx_service.clone()
-    }
 }

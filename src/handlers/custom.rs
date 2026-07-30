@@ -40,5 +40,106 @@ pub async fn health_check(
 }
 
 // Add more custom handlers below...
+use rust_decimal::Decimal;
+use chrono::NaiveDate;
+use uuid::Uuid;
+use crate::application::service::fx_service::{Converted, FxError, NewRate};
+
+// --- FX validated endpoints -------------------------------------------------
+// These are the sanctioned write/convert throat for the rate table, going
+// through FxService (overlap + positivity + direction invariants) rather than
+// the generic CRUD stack. Mounted at POST /fx/rates and POST /fx/convert.
+
+#[derive(Debug, Deserialize)]
+pub struct RegisterRateBody {
+    pub company_id: Option<Uuid>,
+    pub from: String,
+    pub to: String,
+    pub rate: Decimal,
+    pub effective_from: NaiveDate,
+    pub effective_to: Option<NaiveDate>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ConvertBody {
+    pub company_id: Option<Uuid>,
+    pub amount: Decimal,
+    pub from: String,
+    pub to: String,
+    pub on_date: NaiveDate,
+}
+
+#[derive(Debug, Serialize)]
+pub struct ConvertedJson {
+    pub amount: Decimal,
+    pub rate: Decimal,
+    pub rate_id: Option<Uuid>,
+    pub rate_date: NaiveDate,
+    pub inverse: bool,
+}
+
+impl From<Converted> for ConvertedJson {
+    fn from(c: Converted) -> Self {
+        Self {
+            amount: c.amount,
+            rate: c.rate,
+            rate_id: c.rate_id,
+            rate_date: c.rate_date,
+            inverse: c.inverse,
+        }
+    }
+}
+
+/// Register a directed, effective-dated rate through the validated FX throat.
+pub async fn register_fx_rate(
+    State(state): State<AppState>,
+    Json(body): Json<RegisterRateBody>,
+) -> Result<(StatusCode, Json<serde_json::Value>), (StatusCode, String)> {
+    let id = state
+        .fx_service
+        .upsert_rate(NewRate {
+            company_id: body.company_id,
+            from_currency: body.from,
+            to_currency: body.to,
+            rate: body.rate,
+            effective_from: body.effective_from,
+            effective_to: body.effective_to,
+        })
+        .await
+        .map_err(http_err_from_fx)?;
+    Ok((StatusCode::CREATED, Json(serde_json::json!({ "id": id }))))
+}
+
+/// Convert an amount at the rate effective on the given date.
+pub async fn convert_fx(
+    State(state): State<AppState>,
+    Json(body): Json<ConvertBody>,
+) -> Result<Json<ConvertedJson>, (StatusCode, String)> {
+    let c = state
+        .fx_service
+        .convert(body.company_id, body.amount, &body.from, &body.to, body.on_date)
+        .await
+        .map_err(http_err_from_fx)?;
+    Ok(Json(ConvertedJson::from(c)))
+}
+
+/// Map the engine's typed errors to HTTP status codes so a consumer gets a
+/// meaningful response (NoRate -> 404, overlap -> 409) instead of a flat 500.
+fn http_err_from_fx(e: FxError) -> (StatusCode, String) {
+    match e {
+        FxError::Invalid(msg) => (StatusCode::BAD_REQUEST, msg),
+        FxError::UnknownCurrency(c) => {
+            (StatusCode::BAD_REQUEST, format!("unknown currency: {c}"))
+        }
+        FxError::NoRate { from, to, date } => {
+            (StatusCode::NOT_FOUND, format!("no rate {from}->{to} on {date}"))
+        }
+        FxError::OverlappingWindow { from, to } => (
+            StatusCode::CONFLICT,
+            format!("overlapping rate window {from}->{to}"),
+        ),
+        FxError::Db(e) => (StatusCode::INTERNAL_SERVER_ERROR, format!("db: {e}")),
+    }
+}
 
 // <<< CUSTOM HANDLERS END >>>

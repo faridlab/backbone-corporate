@@ -9,6 +9,7 @@ use common::*;
 use backbone_corporate::CorporateModule;
 use backbone_corporate::exports::CorporateFxPort;
 use backbone_corporate::exports::RegisterRate;
+use std::sync::Arc;
 use uuid::Uuid;
 
 // FXPORT-1 — the published port round-trips: register a rate via the port, then convert via the
@@ -18,7 +19,7 @@ async fn fxport1_port_facade_round_trips() {
     let pool = pool().await;
     seed_std_currencies(&pool).await;
     let module = CorporateModule::builder().with_database(pool.clone()).build().expect("build module");
-    let port = module.fx_port();
+    let port: Arc<dyn CorporateFxPort> = module.fx_port();
     let company = Uuid::new_v4();
 
     port.register_rate(RegisterRate {

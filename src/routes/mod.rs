@@ -45,7 +45,13 @@ use crate::handlers::AppState;
 pub fn create_stateless_routes(module: &crate::CorporateModule) -> Router<()> {
     Router::new()
         .merge(create_currency_routes(module.currency_service.clone()))
-        .merge(create_currency_exchange_routes(module.currency_exchange_service.clone()))
+        // Rate table is READ-only in the default composer — a rate's value is its
+        // no-overlap + directional + effective-dated invariant, enforced only in
+        // FxService::upsert_rate. Generic write CRUD would bypass it (the DB
+        // EXCLUDE/CHECK backstops money-correctness, but the friendly errors and
+        // the validated write throat live at POST /fx/rates). Use all_crud_routes()
+        // for the trusted/admin full-write surface.
+        .merge(create_currency_exchange_read_routes(module.currency_exchange_service.clone()))
         .merge(create_incoterm_routes(module.incoterm_service.clone()))
         .merge(create_terms_and_conditions_routes(module.terms_and_conditions_service.clone()))
         .merge(create_territory_routes(module.territory_service.clone()))
@@ -112,6 +118,7 @@ pub fn create_combined_routes(module: &crate::CorporateModule) -> Router<AppStat
     Router::new()
         .merge(crud_routes_stateful)
         .merge(create_stateful_routes())
+        .merge(create_fx_routes())
 }
 
 /// Get all routes (stateful) for the Corporate module.
@@ -128,15 +135,17 @@ pub fn get_routes_with_state(module: &crate::CorporateModule) -> Router<AppState
 
 // <<< CUSTOM HANDLERS START >>>
 // Add custom route handlers here
-// Example:
-//
-// use axum::extract::State;
-// use axum::response::IntoResponse;
-//
-// pub async fn custom_handler(
-//     State(state): State<AppState>,
-// ) -> impl IntoResponse {
-//     // Use state.user_service, etc.
-//     "Custom response"
-// }
+use axum::routing::post;
+use crate::handlers::custom::{register_fx_rate, convert_fx};
+
+/// Validated FX endpoints — the sanctioned write throat for rates and the
+/// conversion endpoint. `POST /fx/rates` goes through `FxService::upsert_rate`
+/// (overlap + positivity + direction invariants), NOT generic CRUD; `POST
+/// /fx/convert` exposes the effective-dated conversion. Mount alongside the
+/// read-only stateless routes via `create_combined_routes`.
+pub fn create_fx_routes() -> Router<AppState> {
+    Router::new()
+        .route("/fx/rates", post(register_fx_rate))
+        .route("/fx/convert", post(convert_fx))
+}
 // <<< CUSTOM HANDLERS END >>>

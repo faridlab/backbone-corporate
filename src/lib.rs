@@ -23,6 +23,7 @@ pub mod infrastructure;
 pub mod application;
 pub mod presentation;
 pub mod seeders;
+pub mod exports;
 
 // Re-exports for convenience - Domain entities
 pub use domain::entity::*;
@@ -62,6 +63,7 @@ pub struct CorporateModule {
     pub(crate) incoterm_service: Arc<IncotermService>,
     pub(crate) terms_and_conditions_service: Arc<TermsAndConditionsService>,
     pub(crate) territory_service: Arc<TerritoryService>,
+    pub(crate) fx_service: Arc<crate::application::service::FxService>,
 }
 
 impl CorporateModule {
@@ -151,6 +153,9 @@ impl CorporateModuleBuilder {
         let territory_service = Arc::new(TerritoryService::with_repository(territory_repository.clone()));
 
         // <<< CUSTOM
+        // FX engine (user-owned; survives regen). Constructed from the same pool
+        // as the CRUD services. Exposed to siblings via CorporateFxPort.
+        let fx_service = Arc::new(crate::application::service::FxService::new(db_pool.clone()));
         // END CUSTOM
 
         Ok(CorporateModule {
@@ -160,6 +165,7 @@ impl CorporateModuleBuilder {
             terms_and_conditions_service,
             territory_service,
             // <<< CUSTOM
+            fx_service,
             // END CUSTOM
         })
     }

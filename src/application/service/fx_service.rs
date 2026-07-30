@@ -191,3 +191,24 @@ fn norm(iso: &str) -> Result<String, FxError> {
     }
     Ok(t)
 }
+
+// The published FX facade. Lives in this user-owned file (not in the generated
+// `impl CorporateModule` block in lib.rs, which has no CUSTOM marker) so it
+// survives `metaphor schema generate`. Sibling modules and integration tests
+// convert/register through this port instead of reaching into application
+// internals — the contract boundary the module owes its consumers.
+impl crate::CorporateModule {
+    /// The published FX contract. This is the sanctioned way for consumers to
+    /// convert amounts and register rates; it returns the export-layer
+    /// `CorporateFxPort`, decoupled from this file's `FxService`/`FxError`.
+    pub fn fx_port(&self) -> std::sync::Arc<dyn crate::exports::CorporateFxPort> {
+        std::sync::Arc::new(crate::exports::CorporateFxServiceImpl::new(self.fx_service.clone()))
+    }
+
+    /// The concrete FX engine — for in-crate handlers that need the typed
+    /// `FxError` (to map it to HTTP status codes). External modules should
+    /// prefer [`Self::fx_port`].
+    pub(crate) fn fx(&self) -> std::sync::Arc<FxService> {
+        self.fx_service.clone()
+    }
+}

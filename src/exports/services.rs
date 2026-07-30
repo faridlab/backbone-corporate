@@ -74,4 +74,78 @@ pub trait CorporateQueryService: Send + Sync {
 
 // <<< CUSTOM SERVICES START >>>
 // Add custom public services here
+use std::sync::Arc;
+use chrono::NaiveDate;
+use rust_decimal::Decimal;
+use crate::application::service::FxService;
+use crate::application::service::fx_service::NewRate;
+
+/// The published FX contract. Sibling modules program against THIS trait — not
+/// `application::service::fx_service` — so the engine's internals are free to
+/// change behind a stable surface. Returns `anyhow::Result`; the application's
+/// typed `FxError` is mapped to `anyhow::Error` at the boundary (consumers that
+/// need to distinguish NoRate etc. should call through the HTTP layer, which
+/// maps the typed error to status codes).
+#[async_trait]
+pub trait CorporateFxPort: Send + Sync {
+    /// Convert `amount` from -> to at the rate effective on `on_date`, rounded
+    /// to the quote currency's minor-unit precision. Same-currency is identity.
+    async fn convert(
+        &self,
+        company_id: Option<Uuid>,
+        amount: Decimal,
+        from: &str,
+        to: &str,
+        on_date: NaiveDate,
+    ) -> Result<Converted>;
+
+    /// Register a directed, effective-dated rate, rejecting a window that
+    /// overlaps an existing one for the same pair + company scope. Returns the
+    /// new (or updated) rate row id.
+    async fn register_rate(&self, rate: RegisterRate) -> Result<Uuid>;
+}
+
+/// Adapter that satisfies [`CorporateFxPort`] by delegating to the hand-authored
+/// [`FxService`]. Constructed by `CorporateModule::fx_port()`.
+pub struct CorporateFxServiceImpl {
+    inner: Arc<FxService>,
+}
+
+impl CorporateFxServiceImpl {
+    pub fn new(inner: Arc<FxService>) -> Self {
+        Self { inner }
+    }
+}
+
+#[async_trait]
+impl CorporateFxPort for CorporateFxServiceImpl {
+    async fn convert(
+        &self,
+        company_id: Option<Uuid>,
+        amount: Decimal,
+        from: &str,
+        to: &str,
+        on_date: NaiveDate,
+    ) -> Result<Converted> {
+        let c = self.inner.convert(company_id, amount, from, to, on_date).await?;
+        Ok(Converted {
+            amount: c.amount,
+            rate: c.rate,
+            rate_id: c.rate_id,
+            rate_date: c.rate_date,
+            inverse: c.inverse,
+        })
+    }
+
+    async fn register_rate(&self, r: RegisterRate) -> Result<Uuid> {
+        self.inner.upsert_rate(NewRate {
+            company_id: r.company_id,
+            from_currency: r.from,
+            to_currency: r.to,
+            rate: r.rate,
+            effective_from: r.effective_from,
+            effective_to: r.effective_to,
+        }).await.map_err(Into::into)
+    }
+}
 // <<< CUSTOM SERVICES END >>>

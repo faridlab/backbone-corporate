@@ -18,11 +18,17 @@ user_owned:
   - "src/infrastructure/persistence/currency_exchange_repository.rs"
   - "src/infrastructure/persistence/currency_repository.rs"
 
+  # AppState carries the FX service for the validated /fx handlers. The generated
+  # AppState has no CUSTOM marker, so the file is hand-maintained (same escape
+  # hatch as fx_service.rs above).
+  - "src/handlers/mod.rs"
+
   # Behavior tests (the golden cases / oracle) + BDD features.
   - "tests/features/**"
   - "tests/fx_golden_cases.rs"
   - "tests/integrity_probes.rs"
   - "tests/fx_accounting_seam.rs"
+  - "tests/fx_port_facade.rs"
   - "tests/common/**"
 
   # Hand-authored module documentation.

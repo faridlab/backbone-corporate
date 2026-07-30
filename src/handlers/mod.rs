@@ -14,6 +14,7 @@ use crate::application::service::CurrencyExchangeService;
 use crate::application::service::IncotermService;
 use crate::application::service::TermsAndConditionsService;
 use crate::application::service::TerritoryService;
+use crate::application::service::FxService;
 
 /// Application state for dependency injection.
 ///
@@ -43,6 +44,8 @@ pub struct AppState {
     pub terms_and_conditions_service: Arc<TermsAndConditionsService>,
     /// Territory service
     pub territory_service: Arc<TerritoryService>,
+    /// FX engine (effective-dated rate lookup + conversion)
+    pub fx_service: Arc<FxService>,
 }
 
 impl AppState {
@@ -52,7 +55,8 @@ impl AppState {
         currency_exchange_service: Arc<CurrencyExchangeService>,
         incoterm_service: Arc<IncotermService>,
         terms_and_conditions_service: Arc<TermsAndConditionsService>,
-        territory_service: Arc<TerritoryService>
+        territory_service: Arc<TerritoryService>,
+        fx_service: Arc<FxService>,
     ) -> Self {
         Self {
             currency_service,
@@ -60,6 +64,7 @@ impl AppState {
             incoterm_service,
             terms_and_conditions_service,
             territory_service,
+            fx_service,
         }
     }
 
@@ -71,6 +76,7 @@ impl AppState {
             incoterm_service: module.incoterm_service.clone(),
             terms_and_conditions_service: module.terms_and_conditions_service.clone(),
             territory_service: module.territory_service.clone(),
+            fx_service: module.fx_service.clone(),
         }
     }
 }
@@ -85,6 +91,7 @@ pub struct AppStateBuilder {
     incoterm_service: Option<Arc<IncotermService>>,
     terms_and_conditions_service: Option<Arc<TermsAndConditionsService>>,
     territory_service: Option<Arc<TerritoryService>>,
+    fx_service: Option<Arc<FxService>>,
 }
 
 impl AppStateBuilder {
@@ -123,6 +130,12 @@ impl AppStateBuilder {
         self
     }
 
+    /// Set the FX service.
+    pub fn with_fx_service(mut self, service: Arc<FxService>) -> Self {
+        self.fx_service = Some(service);
+        self
+    }
+
     /// Build the AppState.
     ///
     /// # Panics
@@ -135,6 +148,7 @@ impl AppStateBuilder {
             incoterm_service: self.incoterm_service.expect("incoterm_service is required"),
             terms_and_conditions_service: self.terms_and_conditions_service.expect("terms_and_conditions_service is required"),
             territory_service: self.territory_service.expect("territory_service is required"),
+            fx_service: self.fx_service.expect("fx_service is required"),
         }
     }
 }

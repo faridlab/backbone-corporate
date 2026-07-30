@@ -259,3 +259,4 @@ impl backbone_core::ApplyUpdateDto<UpdateIncotermDto> for Incoterm {
 // Add custom DTOs specific to Incoterm here.
 // This section will be preserved during regeneration.
 // >>> END CUSTOM DTOs
+

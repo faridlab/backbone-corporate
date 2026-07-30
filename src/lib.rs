@@ -57,11 +57,11 @@ use sqlx::PgPool;
 /// let router = corporate.all_crud_routes();
 /// ```
 pub struct CorporateModule {
-    pub currency_service: Arc<CurrencyService>,
-    pub currency_exchange_service: Arc<CurrencyExchangeService>,
-    pub incoterm_service: Arc<IncotermService>,
-    pub terms_and_conditions_service: Arc<TermsAndConditionsService>,
-    pub territory_service: Arc<TerritoryService>,
+    pub(crate) currency_service: Arc<CurrencyService>,
+    pub(crate) currency_exchange_service: Arc<CurrencyExchangeService>,
+    pub(crate) incoterm_service: Arc<IncotermService>,
+    pub(crate) terms_and_conditions_service: Arc<TermsAndConditionsService>,
+    pub(crate) territory_service: Arc<TerritoryService>,
 }
 
 impl CorporateModule {

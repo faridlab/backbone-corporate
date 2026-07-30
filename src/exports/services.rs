@@ -5,8 +5,6 @@
 //! These services provide the public API for other modules.
 //! They only expose read operations - writes go through events.
 
-use std::sync::Arc;
-
 use anyhow::Result;
 use async_trait::async_trait;
 use uuid::Uuid;
@@ -68,21 +66,6 @@ pub trait CorporateQueryService: Send + Sync {
     /// Check if Territory exists
     async fn territory_exists(&self, id: TerritoryId) -> Result<bool>;
 
-}
-
-// ============================================================================
-// QUERY SERVICE IMPLEMENTATION
-// ============================================================================
-
-/// Default implementation of CorporateQueryService
-pub struct CorporateQueryServiceImpl<R> {
-    repository: Arc<R>,
-}
-
-impl<R> CorporateQueryServiceImpl<R> {
-    pub fn new(repository: Arc<R>) -> Self {
-        Self { repository }
-    }
 }
 
 // ============================================================================

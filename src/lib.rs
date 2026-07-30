@@ -63,7 +63,9 @@ pub struct CorporateModule {
     pub(crate) incoterm_service: Arc<IncotermService>,
     pub(crate) terms_and_conditions_service: Arc<TermsAndConditionsService>,
     pub(crate) territory_service: Arc<TerritoryService>,
+    // <<< CUSTOM FIELDS
     pub(crate) fx_service: Arc<crate::application::service::FxService>,
+    // END CUSTOM
 }
 
 impl CorporateModule {

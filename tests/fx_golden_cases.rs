@@ -134,3 +134,22 @@ async fn fgc6_inverse_reciprocates_the_stamped_row() {
     assert!(back.inverse, "produced from the reciprocal of the forward row");
     assert_eq!(back.rate_id, Some(fwd_id), "the SAME stamped row — not a drifting hand-typed inverse");
 }
+
+// FGC-7 — overflow safety: an amount near rust_decimal's 28-digit ceiling, times a large rate,
+// overflows the envelope. This must surface as FxError::Overflow, NOT a panic from naive `*`.
+#[tokio::test]
+async fn fgc7_overflow_is_an_error_not_a_panic() {
+    let pool = pool().await;
+    seed_std_currencies(&pool).await;
+    let svc = FxService::new(pool.clone());
+    let company = Uuid::new_v4();
+    svc.upsert_rate(NewRate {
+        company_id: Some(company), from_currency: "USD".into(), to_currency: "IDR".into(),
+        rate: dec("16250"), effective_from: d(2026, 1, 1), effective_to: None,
+    }).await.unwrap();
+
+    // 28 nines (~1e28, under Decimal::MAX so it parses) x 16,250 overflows the 28-digit envelope.
+    let huge = dec("9999999999999999999999999999");
+    let r = svc.convert(Some(company), huge, "USD", "IDR", d(2026, 6, 1)).await;
+    assert!(matches!(r, Err(FxError::Overflow)), "overflow must be a typed error, got {:?}", r);
+}

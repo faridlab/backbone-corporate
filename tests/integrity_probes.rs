@@ -112,3 +112,38 @@ async fn fip5_zero_rate_rejected_at_db() {
     .execute(&pool).await;
     assert!(neg.is_err(), "a negative rate (receivable→payable flip) cannot be inserted");
 }
+
+// FIP-6 — historical reproducibility under currency retirement: the quote currency's precision is
+// read REGARDLESS of soft-delete, so a document booked before the currency was retired still
+// reproduces its number. Regression for the old `deleted_at IS NULL` filter on decimal_places_tx,
+// which made convert error (UnknownCurrency) once the quote currency was soft-deleted.
+#[tokio::test]
+async fn fip6_soft_deleted_quote_currency_still_converts() {
+    let pool = pool().await;
+    let from = fake_currency(&pool, 2).await;
+    let to = fake_currency(&pool, 0).await; // 0-dp quote currency
+    let svc = FxService::new(pool.clone());
+    let company = Uuid::new_v4();
+    svc.upsert_rate(NewRate {
+        company_id: Some(company), from_currency: from.clone(), to_currency: to.clone(),
+        rate: dec("100"), effective_from: d(2026, 1, 1), effective_to: None,
+    }).await.unwrap();
+
+    // Before retirement: 12.34 * 100 = 1234, rounded to the quote's 0 dp.
+    let before = svc.convert(Some(company), dec("12.34"), &from, &to, d(2026, 6, 1)).await.unwrap();
+    assert_eq!(before.amount, dec("1234"));
+
+    // Retire the quote currency (soft-delete via metadata). The historical conversion must still
+    // resolve and reproduce the same number — ADR-001 Decision 1.
+    sqlx::query(
+        r#"UPDATE corporate.currencies
+             SET metadata = COALESCE(metadata, '{}'::jsonb) || jsonb_build_object('deleted_at', '2026-07-31T00:00:00Z')
+           WHERE iso_code = $1"#,
+    )
+    .bind(&to)
+    .execute(&pool).await.unwrap();
+
+    let after = svc.convert(Some(company), dec("12.34"), &from, &to, d(2026, 6, 1)).await;
+    assert!(after.is_ok(), "a retired quote currency must still convert (historical reproducibility)");
+    assert_eq!(after.unwrap().amount, dec("1234"), "the booked number reproduces after retirement");
+}

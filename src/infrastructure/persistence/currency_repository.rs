@@ -37,16 +37,18 @@ impl CurrencyRepository {
 
 /// FX decimal-precision read. Lives here (not in the service) per the module's 4-layer rule.
 impl CurrencyRepository {
-    /// The quote currency's minor-unit precision (IDR=0, USD=2). None on an unknown / soft-deleted
-    /// currency so the caller errors rather than silently mis-rounding monetary amounts. Runs on the
-    /// caller's tx; `corporate.currencies` is NOT itself company-fenced.
+    /// The quote currency's minor-unit precision (IDR=0, USD=2). Read REGARDLESS of soft-delete
+    /// state, so a historical document still reproduces its booked number after the quote currency
+    /// is retired (ADR-001 Decision 1: history is never re-translated). `None` only for a
+    /// never-registered code, so the caller errors rather than guessing a precision. Runs on the
+    /// caller's tx; `corporate.currencies` is NOT company-fenced.
     pub async fn decimal_places_tx(
         &self,
         conn: &mut PgConnection,
         iso: &str,
     ) -> Result<Option<i32>, sqlx::Error> {
         sqlx::query_scalar(
-            "SELECT decimal_places FROM corporate.currencies WHERE iso_code=$1 AND (metadata->>'deleted_at') IS NULL",
+            "SELECT decimal_places FROM corporate.currencies WHERE iso_code=$1",
         )
         .bind(iso).fetch_optional(conn).await
     }

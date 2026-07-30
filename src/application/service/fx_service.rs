@@ -13,7 +13,7 @@
 //! Posts NO GL. Corporate never calls another module; consumers read it (a `ConversionPort`).
 
 use chrono::NaiveDate;
-use rust_decimal::{Decimal, RoundingStrategy};
+use rust_decimal::prelude::*;
 use sqlx::PgPool;
 use uuid::Uuid;
 
@@ -37,6 +37,11 @@ pub enum FxError {
     /// silent 2-dp default for an unknown code would mis-round monetary amounts (ADR-001 parking lot).
     #[error("unknown currency: {0}")]
     UnknownCurrency(String),
+    /// The conversion overflowed `rust_decimal`'s 28-digit envelope (e.g. a very large IDR amount
+    /// multiplied by a big rate). Surfaced as a typed error so a caller can handle it instead of the
+    /// process panicking on the naive `*` / `/`.
+    #[error("arithmetic overflow in conversion")]
+    Overflow,
 }
 
 pub struct NewRate {
@@ -159,7 +164,8 @@ impl FxService {
         // Deterministic — overlap is prevented on write, so at most one window per scope covers the date;
         // the ORDER BY only chooses between company vs global.
         if let Some((rate, rate_id)) = exchanges.find_effective_rate_tx(&mut *tx, &from, &to, on_date).await? {
-            let converted = (amount * rate).round_dp_with_strategy(dp, RoundingStrategy::MidpointAwayFromZero);
+            let prod = amount.checked_mul(rate).ok_or(FxError::Overflow)?;
+            let converted = prod.round_dp_with_strategy(dp, RoundingStrategy::MidpointAwayFromZero);
             tx.commit().await?;
             return Ok(Converted { amount: converted, rate, rate_id: Some(rate_id), rate_date: on_date, inverse: false });
         }
@@ -170,8 +176,9 @@ impl FxService {
         // that would drift from it. This is the narrow reversal case — NOT a generic bidirectional market
         // convert.
         if let Some((fwd_rate, fwd_id)) = exchanges.find_effective_rate_tx(&mut *tx, &to, &from, on_date).await? {
-            let rate = Decimal::ONE / fwd_rate;
-            let converted = (amount / fwd_rate).round_dp_with_strategy(dp, RoundingStrategy::MidpointAwayFromZero);
+            let rate = Decimal::ONE.checked_div(fwd_rate).ok_or(FxError::Overflow)?;
+            let q = amount.checked_div(fwd_rate).ok_or(FxError::Overflow)?;
+            let converted = q.round_dp_with_strategy(dp, RoundingStrategy::MidpointAwayFromZero);
             tx.commit().await?;
             return Ok(Converted { amount: converted, rate, rate_id: Some(fwd_id), rate_date: on_date, inverse: true });
         }

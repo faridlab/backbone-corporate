@@ -138,6 +138,10 @@ fn http_err_from_fx(e: FxError) -> (StatusCode, String) {
             StatusCode::CONFLICT,
             format!("overlapping rate window {from}->{to}"),
         ),
+        FxError::Overflow => (
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "arithmetic overflow in conversion".to_string(),
+        ),
         FxError::Db(e) => (StatusCode::INTERNAL_SERVER_ERROR, format!("db: {e}")),
     }
 }

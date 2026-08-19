@@ -14,6 +14,14 @@ version: 2
 schema: corporate
 description: "Corporate reference masters: Currency + CurrencyExchange (effective-dated FX), Territory, Incoterm, TermsAndConditions"
 
+# ADR-0014 company fence: currency_exchanges is company-scoped and fenced strict.
+# The other masters (currencies, incoterms, territories, terms_and_conditions) are
+# global reference data with no company_id — implicitly excluded. Note: the live
+# currency_exchanges policy is a deliberate split (reads admit global NULL-company
+# fallback rates; writes stay own-only) — see the ADR-0008 follow-up migration; a
+# future regen must preserve that shape.
+company_fence: strict
+
 config:
   database: postgresql
   soft_delete: true

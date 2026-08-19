@@ -11,6 +11,12 @@
 # Add your hand-authored services, handlers, tests, and docs below as you write them.
 
 user_owned:
+  # The fence re-statement migration hand-adjusted to the split policy (reads admit
+  # global NULL-company fallback rates, writes stay own-only). A naive regen would
+  # re-derive a plain-strict stanza and re-break multi-currency consumers — never let
+  # the generator own this file.
+  - "migrations/20260819100000_company_fence_strict.up.sql"
+  - "migrations/20260819100000_company_fence_strict.down.sql"
   # The hand-authored FX conversion engine (effective-dated rate lookup + no-overlap guard).
   - "src/application/service/fx_service.rs"
   # User-owned repositories holding the FX engine's hand-written SQL (overlap check, rate insert,

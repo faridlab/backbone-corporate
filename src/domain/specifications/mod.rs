@@ -4,10 +4,10 @@
 //!
 //! Combinators (AND/OR/NOT) come from `backbone_core::Specification`.
 
-pub use backbone_core::{Specification, AndSpecification, OrSpecification, NotSpecification};
+pub use backbone_core::{AndSpecification, NotSpecification, OrSpecification, Specification};
 
-pub mod currency_specification;
 pub mod currency_exchange_specification;
+pub mod currency_specification;
 pub mod incoterm_specification;
 pub mod terms_and_conditions_specification;
 pub mod territory_specification;

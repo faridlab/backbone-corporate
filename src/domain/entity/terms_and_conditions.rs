@@ -1,8 +1,8 @@
+use super::AuditMetadata;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use uuid::Uuid;
-use super::AuditMetadata;
 
 /// Strongly-typed ID for TermsAndConditions
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -10,9 +10,15 @@ use super::AuditMetadata;
 pub struct TermsAndConditionsId(pub Uuid);
 
 impl TermsAndConditionsId {
-    pub fn new(id: Uuid) -> Self { Self(id) }
-    pub fn generate() -> Self { Self(Uuid::new_v4()) }
-    pub fn into_inner(self) -> Uuid { self.0 }
+    pub fn new(id: Uuid) -> Self {
+        Self(id)
+    }
+    pub fn generate() -> Self {
+        Self(Uuid::new_v4())
+    }
+    pub fn into_inner(self) -> Uuid {
+        self.0
+    }
 }
 
 impl std::fmt::Display for TermsAndConditionsId {
@@ -29,20 +35,28 @@ impl std::str::FromStr for TermsAndConditionsId {
 }
 
 impl From<Uuid> for TermsAndConditionsId {
-    fn from(id: Uuid) -> Self { Self(id) }
+    fn from(id: Uuid) -> Self {
+        Self(id)
+    }
 }
 
 impl From<TermsAndConditionsId> for Uuid {
-    fn from(id: TermsAndConditionsId) -> Self { id.0 }
+    fn from(id: TermsAndConditionsId) -> Self {
+        id.0
+    }
 }
 
 impl AsRef<Uuid> for TermsAndConditionsId {
-    fn as_ref(&self) -> &Uuid { &self.0 }
+    fn as_ref(&self) -> &Uuid {
+        &self.0
+    }
 }
 
 impl std::ops::Deref for TermsAndConditionsId {
     type Target = Uuid;
-    fn deref(&self) -> &Self::Target { &self.0 }
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
@@ -60,7 +74,7 @@ pub struct TermsAndConditions {
 impl TermsAndConditions {
     /// Create a builder for TermsAndConditions
     pub fn builder() -> TermsAndConditionsBuilder {
-        TermsAndConditionsBuilder::default()
+        <TermsAndConditionsBuilder as Default>::default()
     }
 
     /// Create a new TermsAndConditions with required fields
@@ -125,7 +139,6 @@ impl TermsAndConditions {
         self.metadata.deleted_by.as_ref()
     }
 
-
     // ==========================================================
     // Partial Update
     // ==========================================================
@@ -135,16 +148,24 @@ impl TermsAndConditions {
         for (key, value) in fields {
             match key.as_str() {
                 "code" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.code = v; }
+                    if let Ok(v) = serde_json::from_value(value) {
+                        self.code = v;
+                    }
                 }
                 "title" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.title = v; }
+                    if let Ok(v) = serde_json::from_value(value) {
+                        self.title = v;
+                    }
                 }
                 "body" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.body = v; }
+                    if let Ok(v) = serde_json::from_value(value) {
+                        self.body = v;
+                    }
                 }
                 "is_active" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.is_active = v; }
+                    if let Ok(v) = serde_json::from_value(value) {
+                        self.is_active = v;
+                    }
                 }
                 _ => {} // ignore unknown fields
             }

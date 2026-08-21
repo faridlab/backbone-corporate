@@ -10,13 +10,23 @@ use common::*;
 
 use std::sync::Arc;
 
-use backbone_accounting::application::service::posting_service::{PostingLine, PostingRequest, PostingService};
+use backbone_accounting::application::service::posting_service::{
+    PostingLine, PostingRequest, PostingService,
+};
 use backbone_accounting::infrastructure::persistence::SqlxPostingRepository;
 use backbone_corporate::application::service::fx_service::*;
+use backbone_corporate::domain::entity::RateType;
 use rust_decimal::Decimal;
 use uuid::Uuid;
 
-async fn account(pool: &sqlx::PgPool, company: Uuid, code: &str, atype: &str, subtype: &str, normal: &str) -> Uuid {
+async fn account(
+    pool: &sqlx::PgPool,
+    company: Uuid,
+    code: &str,
+    atype: &str,
+    subtype: &str,
+    normal: &str,
+) -> Uuid {
     let id = Uuid::new_v4();
     sqlx::query(
         r#"INSERT INTO accounting.accounts
@@ -25,8 +35,17 @@ async fn account(pool: &sqlx::PgPool, company: Uuid, code: &str, atype: &str, su
            VALUES ($1,$2,$3,$4,$5,$6::account_type,$7::account_subtype,$8::normal_balance,
                    false,true,'active'::account_status)"#,
     )
-    .bind(id).bind(company).bind(code).bind(code).bind(code).bind(atype).bind(subtype).bind(normal)
-    .execute(pool).await.expect("seed account");
+    .bind(id)
+    .bind(company)
+    .bind(code)
+    .bind(code)
+    .bind(code)
+    .bind(atype)
+    .bind(subtype)
+    .bind(normal)
+    .execute(pool)
+    .await
+    .expect("seed account");
     id
 }
 async fn balance(pool: &sqlx::PgPool, acct: Uuid) -> Decimal {
@@ -44,32 +63,85 @@ async fn fxseam1_converted_foreign_bill_posts_balanced() {
     let company = Uuid::new_v4();
     let fx = FxService::new(pool.clone());
     fx.upsert_rate(NewRate {
-        company_id: Some(company), from_currency: "USD".into(), to_currency: "IDR".into(),
-        rate: dec("16250"), effective_from: d(2026, 1, 1), effective_to: None,
-    }).await.unwrap();
+        company_id: Some(company),
+        from_currency: "USD".into(),
+        to_currency: "IDR".into(),
+        rate: dec("16250"),
+        effective_from: d(2026, 1, 1),
+        effective_to: None,
+        rate_type: RateType::Spot,
+        source: None,
+    })
+    .await
+    .unwrap();
 
     // The consumer converts the foreign amount through corporate's real FX engine.
-    let converted = fx.convert(Some(company), dec("100"), "USD", "IDR", d(2026, 6, 1)).await.unwrap();
-    assert_eq!(converted.amount, dec("1625000"), "USD 100 @ 16,250 = IDR 1,625,000");
+    let converted = fx
+        .convert(Some(company), dec("100"), "USD", "IDR", d(2026, 6, 1))
+        .await
+        .unwrap();
+    assert_eq!(
+        converted.amount,
+        dec("1625000"),
+        "USD 100 @ 16,250 = IDR 1,625,000"
+    );
 
     // …and books it in the REAL ledger, in the functional currency, balanced.
-    let expense = account(&pool, company, "6100-COR", "expense", "operating_expense", "debit").await;
-    let ap = account(&pool, company, "2100-COR", "liability", "accounts_payable", "credit").await;
+    let expense = account(
+        &pool,
+        company,
+        "6100-COR",
+        "expense",
+        "operating_expense",
+        "debit",
+    )
+    .await;
+    let ap = account(
+        &pool,
+        company,
+        "2100-COR",
+        "liability",
+        "accounts_payable",
+        "credit",
+    )
+    .await;
     let svc = PostingService::new(Arc::new(SqlxPostingRepository::new(pool.clone())));
     let mut req = PostingRequest::original(company, "manual", Uuid::new_v4(), d(2026, 6, 1));
     req.source_reference = Some(format!("USD bill @ {}", converted.rate));
     req.lines = vec![
-        PostingLine { account_id: expense, debit: converted.amount, credit: Decimal::ZERO,
-            party_type: None, party_id: None, cost_center_id: None, project_id: None, department_id: None,
-            description: Some("foreign supplier bill (converted)".into()) },
-        PostingLine { account_id: ap, debit: Decimal::ZERO, credit: converted.amount,
-            party_type: Some("supplier".into()), party_id: Some(Uuid::new_v4()),
-            cost_center_id: None, project_id: None, department_id: None, description: None },
+        PostingLine {
+            account_id: expense,
+            debit: converted.amount,
+            credit: Decimal::ZERO,
+            party_type: None,
+            party_id: None,
+            cost_center_id: None,
+            project_id: None,
+            department_id: None,
+            description: Some("foreign supplier bill (converted)".into()),
+        },
+        PostingLine {
+            account_id: ap,
+            debit: Decimal::ZERO,
+            credit: converted.amount,
+            party_type: Some("supplier".into()),
+            party_id: Some(Uuid::new_v4()),
+            cost_center_id: None,
+            project_id: None,
+            department_id: None,
+            description: None,
+        },
     ];
-    svc.post(req, None).await.expect("the real ledger accepts the converted, balanced journal");
+    svc.post(req, None)
+        .await
+        .expect("the real ledger accepts the converted, balanced journal");
 
     assert_eq!(balance(&pool, expense).await, dec("1625000"));
     assert_eq!(balance(&pool, ap).await, dec("-1625000"));
     let net = balance(&pool, expense).await + balance(&pool, ap).await;
-    assert_eq!(net, Decimal::ZERO, "double-entry: the converted amount balances");
+    assert_eq!(
+        net,
+        Decimal::ZERO,
+        "double-entry: the converted amount balances"
+    );
 }

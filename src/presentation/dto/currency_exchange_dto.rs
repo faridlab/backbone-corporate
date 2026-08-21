@@ -5,10 +5,10 @@
 //! DTOs provide a clean separation between domain entities and API
 //! representations, with validation and OpenAPI documentation support.
 
+use chrono::{DateTime, NaiveDate, Utc};
+use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use chrono::{DateTime, Utc, NaiveDate};
-use rust_decimal::Decimal;
 
 #[cfg(feature = "openapi")]
 #[cfg(feature = "openapi")]
@@ -17,8 +17,9 @@ use utoipa::ToSchema;
 #[cfg(feature = "validation")]
 use validator::Validate;
 
-use crate::domain::entity::CurrencyExchange;
 use crate::domain::entity::AuditMetadata;
+use crate::domain::entity::CurrencyExchange;
+use crate::domain::entity::RateType;
 
 // =============================================================================
 // Create DTO
@@ -47,8 +48,17 @@ pub struct CreateCurrencyExchangeDto {
     #[cfg_attr(feature = "openapi", schema(example = "2024-01-01"))]
     #[serde(alias = "effective_from")]
     pub effective_from: NaiveDate,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "effective_to")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "effective_to"
+    )]
     pub effective_to: Option<NaiveDate>,
+    #[serde(alias = "rate_type")]
+    pub rate_type: RateType,
+    #[cfg_attr(feature = "validation", validate(length(max = 60)))]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub source: Option<String>,
 }
 
 // =============================================================================
@@ -78,8 +88,17 @@ pub struct UpdateCurrencyExchangeDto {
     #[cfg_attr(feature = "openapi", schema(example = "2024-01-01"))]
     #[serde(alias = "effective_from")]
     pub effective_from: NaiveDate,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "effective_to")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "effective_to"
+    )]
     pub effective_to: Option<NaiveDate>,
+    #[serde(alias = "rate_type")]
+    pub rate_type: RateType,
+    #[cfg_attr(feature = "validation", validate(length(max = 60)))]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub source: Option<String>,
 }
 
 // =============================================================================
@@ -112,12 +131,24 @@ pub struct PatchCurrencyExchangeDto {
     pub effective_from: Option<NaiveDate>,
     #[serde(skip_serializing_if = "Option::is_none", alias = "effective_to")]
     pub effective_to: Option<NaiveDate>,
+    #[serde(skip_serializing_if = "Option::is_none", alias = "rate_type")]
+    pub rate_type: Option<RateType>,
+    #[cfg_attr(feature = "validation", validate(length(max = 60)))]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub source: Option<String>,
 }
 
 impl PatchCurrencyExchangeDto {
     /// Check if any field is set
     pub fn has_changes(&self) -> bool {
-        self.company_id.is_some() || self.from_currency.is_some() || self.to_currency.is_some() || self.rate.is_some() || self.effective_from.is_some() || self.effective_to.is_some()
+        self.company_id.is_some()
+            || self.from_currency.is_some()
+            || self.to_currency.is_some()
+            || self.rate.is_some()
+            || self.effective_from.is_some()
+            || self.effective_to.is_some()
+            || self.rate_type.is_some()
+            || self.source.is_some()
     }
 }
 
@@ -133,7 +164,10 @@ impl PatchCurrencyExchangeDto {
 #[cfg_attr(feature = "openapi", derive(ToSchema))]
 #[serde(rename_all = "camelCase")]
 pub struct CurrencyExchangeResponseDto {
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
+    #[cfg_attr(
+        feature = "openapi",
+        schema(example = "550e8400-e29b-41d4-a716-446655440000")
+    )]
     pub id: Uuid,
     pub company_id: Option<Uuid>,
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
@@ -144,6 +178,8 @@ pub struct CurrencyExchangeResponseDto {
     #[cfg_attr(feature = "openapi", schema(example = "2024-01-01"))]
     pub effective_from: NaiveDate,
     pub effective_to: Option<NaiveDate>,
+    pub rate_type: RateType,
+    pub source: Option<String>,
     pub metadata: AuditMetadata,
 }
 
@@ -177,7 +213,12 @@ pub struct CurrencyExchangeListResponseDto {
 
 impl CurrencyExchangeListResponseDto {
     /// Create a new list response from items and pagination info
-    pub fn new(items: Vec<CurrencyExchangeResponseDto>, total: u64, page: u32, per_page: u32) -> Self {
+    pub fn new(
+        items: Vec<CurrencyExchangeResponseDto>,
+        total: u64,
+        page: u32,
+        per_page: u32,
+    ) -> Self {
         let total_pages = if per_page > 0 {
             ((total as f64) / (per_page as f64)).ceil() as u32
         } else {
@@ -221,6 +262,8 @@ impl From<CurrencyExchange> for CurrencyExchangeResponseDto {
             rate: entity.rate,
             effective_from: entity.effective_from,
             effective_to: entity.effective_to,
+            rate_type: entity.rate_type,
+            source: entity.source,
             metadata: entity.metadata,
         }
     }
@@ -249,6 +292,8 @@ impl From<CreateCurrencyExchangeDto> for CurrencyExchange {
             rate: dto.rate,
             effective_from: dto.effective_from,
             effective_to: dto.effective_to,
+            rate_type: dto.rate_type,
+            source: dto.source,
             metadata: AuditMetadata::default(),
         }
     }
@@ -264,6 +309,8 @@ impl From<&CurrencyExchange> for CurrencyExchangeResponseDto {
             rate: entity.rate.clone(),
             effective_from: entity.effective_from.clone(),
             effective_to: entity.effective_to.clone(),
+            rate_type: entity.rate_type.clone(),
+            source: entity.source.clone(),
             metadata: entity.metadata.clone(),
         }
     }
@@ -276,13 +323,18 @@ impl backbone_core::FromCreateDto<CreateCurrencyExchangeDto> for CurrencyExchang
 }
 
 impl backbone_core::ApplyUpdateDto<UpdateCurrencyExchangeDto> for CurrencyExchange {
-    fn apply_update(mut self, dto: UpdateCurrencyExchangeDto) -> backbone_core::ServiceResult<Self> {
+    fn apply_update(
+        mut self,
+        dto: UpdateCurrencyExchangeDto,
+    ) -> backbone_core::ServiceResult<Self> {
         self.company_id = dto.company_id;
         self.from_currency = dto.from_currency;
         self.to_currency = dto.to_currency;
         self.rate = dto.rate;
         self.effective_from = dto.effective_from;
         self.effective_to = dto.effective_to;
+        self.rate_type = dto.rate_type;
+        self.source = dto.source;
         Ok(self)
     }
 }
@@ -295,4 +347,3 @@ impl backbone_core::ApplyUpdateDto<UpdateCurrencyExchangeDto> for CurrencyExchan
 // Add custom DTOs specific to CurrencyExchange here.
 // This section will be preserved during regeneration.
 // >>> END CUSTOM DTOs
-

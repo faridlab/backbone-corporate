@@ -7,9 +7,9 @@
 
 use backbone_core::GenericCrudService;
 
-use crate::presentation::dto::{CreateCurrencyDto, UpdateCurrencyDto};
 use crate::domain::entity::Currency;
 use crate::infrastructure::persistence::CurrencyRepository;
+use crate::presentation::dto::{CreateCurrencyDto, UpdateCurrencyDto};
 
 /// Application service for Currency entities.
 ///
@@ -25,12 +25,8 @@ use crate::infrastructure::persistence::CurrencyRepository;
 ///     // add domain-specific dependencies here
 /// }
 /// ```
-pub type CurrencyService = GenericCrudService<
-    Currency,
-    CreateCurrencyDto,
-    UpdateCurrencyDto,
-    CurrencyRepository,
->;
+pub type CurrencyService =
+    GenericCrudService<Currency, CreateCurrencyDto, UpdateCurrencyDto, CurrencyRepository>;
 
 // <<< CUSTOM
 // END CUSTOM

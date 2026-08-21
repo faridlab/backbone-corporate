@@ -5,11 +5,11 @@
 //! This trait defines the repository contract for the CurrencyExchange aggregate.
 //! Implementation is in the infrastructure layer.
 
-use async_trait::async_trait;
 use anyhow::Result;
+use async_trait::async_trait;
 use uuid::Uuid;
 
-use crate::domain::entity::CurrencyExchange;
+use crate::domain::entity::{CurrencyExchange, RateType};
 
 /// Pagination parameters for list queries
 #[derive(Debug, Clone, Default)]
@@ -47,12 +47,18 @@ pub struct CurrencyExchangeFilter {
     pub company_id: Option<Uuid>,
     pub from_currency: Option<String>,
     pub to_currency: Option<String>,
+    pub rate_type: Option<RateType>,
+    pub source: Option<String>,
 }
 
 impl CurrencyExchangeFilter {
     /// Check if any filter is set
     pub fn has_filters(&self) -> bool {
-        self.company_id.is_some() || self.from_currency.is_some() || self.to_currency.is_some()
+        self.company_id.is_some()
+            || self.from_currency.is_some()
+            || self.to_currency.is_some()
+            || self.rate_type.is_some()
+            || self.source.is_some()
     }
 }
 
@@ -62,7 +68,6 @@ impl CurrencyExchangeFilter {
 /// Implementations should be in the infrastructure layer.
 #[async_trait]
 pub trait CurrencyExchangeRepository: Send + Sync {
-
     // =========================================================================
     // Core CRUD Operations
     // =========================================================================
@@ -77,7 +82,8 @@ pub trait CurrencyExchangeRepository: Send + Sync {
     async fn find_all(&self) -> Result<Vec<CurrencyExchange>>;
 
     /// Update currency_exchange by ID
-    async fn update(&self, id: &str, entity: &CurrencyExchange) -> Result<Option<CurrencyExchange>>;
+    async fn update(&self, id: &str, entity: &CurrencyExchange)
+        -> Result<Option<CurrencyExchange>>;
 
     /// Delete currency_exchange by ID
     async fn delete(&self, id: &str) -> Result<bool>;
@@ -87,10 +93,17 @@ pub trait CurrencyExchangeRepository: Send + Sync {
     // =========================================================================
 
     /// List currency_exchange with pagination
-    async fn list(&self, params: CurrencyExchangePaginationParams) -> Result<CurrencyExchangePaginatedResult>;
+    async fn list(
+        &self,
+        params: CurrencyExchangePaginationParams,
+    ) -> Result<CurrencyExchangePaginatedResult>;
 
     /// List currency_exchange with pagination and filters
-    async fn list_with_filters(&self, params: CurrencyExchangePaginationParams, filters: CurrencyExchangeFilter) -> Result<CurrencyExchangePaginatedResult>;
+    async fn list_with_filters(
+        &self,
+        params: CurrencyExchangePaginationParams,
+        filters: CurrencyExchangeFilter,
+    ) -> Result<CurrencyExchangePaginatedResult>;
 
     /// Count all currency_exchange entities
     async fn count(&self) -> Result<u64>;
@@ -112,7 +125,10 @@ pub trait CurrencyExchangeRepository: Send + Sync {
     async fn restore(&self, id: &str) -> Result<Option<CurrencyExchange>>;
 
     /// List soft-deleted currency_exchange entities
-    async fn list_deleted(&self, params: CurrencyExchangePaginationParams) -> Result<CurrencyExchangePaginatedResult>;
+    async fn list_deleted(
+        &self,
+        params: CurrencyExchangePaginationParams,
+    ) -> Result<CurrencyExchangePaginatedResult>;
 
     /// Empty trash (permanently delete all soft-deleted entities)
     async fn empty_trash(&self) -> Result<u64>;

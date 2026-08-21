@@ -28,7 +28,7 @@ impl TestDataGenerator for CurrencyTestData {
             "name": format!("Test {}", Uuid::new_v4().to_string().split('-').next().unwrap()),
             "symbol": null,
             "decimal_places": 1,
-            "is_active": false,
+            "status": "active",
             "metadata": json!({}),
         })
     }
@@ -41,7 +41,7 @@ impl TestDataGenerator for CurrencyTestData {
             "name": format!("Test {}", Uuid::new_v4().to_string().split('-').next().unwrap()),
             "symbol": null,
             "decimal_places": 1,
-            "is_active": false,
+            "status": "active",
             "metadata": json!({}),
         })
     }

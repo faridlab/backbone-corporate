@@ -5,9 +5,9 @@
 //! Returns an `EntityValidator<Currency>` pre-loaded with schema-derived
 //! field rules. Extend in the `// <<< CUSTOM` zone.
 
-use backbone_core::{EntityValidator, ValidationErrors, ValidationError};
-use backbone_core::{OptionalNotBlank, RequiredString};
 use crate::domain::entity::Currency;
+use backbone_core::{EntityValidator, ValidationError, ValidationErrors};
+use backbone_core::{OptionalNotBlank, RequiredString};
 
 /// Validator type alias for Currency entities.
 pub type CurrencyValidator = EntityValidator<Currency>;
@@ -17,7 +17,9 @@ pub fn currency_validator() -> CurrencyValidator {
     EntityValidator::new()
         .rule(RequiredString::new("iso_code", |e: &Currency| &e.iso_code))
         .rule(RequiredString::new("name", |e: &Currency| &e.name))
-        .rule(OptionalNotBlank::new("symbol", |e: &Currency| e.symbol.as_deref()))
+        .rule(OptionalNotBlank::new("symbol", |e: &Currency| {
+            e.symbol.as_deref()
+        }))
     // <<< CUSTOM RULES
     // END CUSTOM RULES
 }

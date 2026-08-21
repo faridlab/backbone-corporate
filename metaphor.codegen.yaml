@@ -38,6 +38,8 @@ user_owned:
   - "tests/integrity_probes.rs"
   - "tests/fx_accounting_seam.rs"
   - "tests/fx_port_facade.rs"
+  # The raw spot-rate read (latest-on-or-before over the windowed rate table).
+  - "tests/fx_spot_on_or_before.rs"
   - "tests/common/**"
 
   # Hand-authored module documentation.

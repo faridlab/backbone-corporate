@@ -5,10 +5,10 @@
 //! This trait defines the repository contract for the Currency aggregate.
 //! Implementation is in the infrastructure layer.
 
-use async_trait::async_trait;
 use anyhow::Result;
+use async_trait::async_trait;
 
-use crate::domain::entity::Currency;
+use crate::domain::entity::{Currency, CurrencyStatus};
 
 /// Pagination parameters for list queries
 #[derive(Debug, Clone, Default)]
@@ -46,13 +46,16 @@ pub struct CurrencyFilter {
     pub iso_code: Option<String>,
     pub name: Option<String>,
     pub symbol: Option<String>,
-    pub is_active: Option<bool>,
+    pub status: Option<CurrencyStatus>,
 }
 
 impl CurrencyFilter {
     /// Check if any filter is set
     pub fn has_filters(&self) -> bool {
-        self.iso_code.is_some() || self.name.is_some() || self.symbol.is_some() || self.is_active.is_some()
+        self.iso_code.is_some()
+            || self.name.is_some()
+            || self.symbol.is_some()
+            || self.status.is_some()
     }
 }
 
@@ -62,7 +65,6 @@ impl CurrencyFilter {
 /// Implementations should be in the infrastructure layer.
 #[async_trait]
 pub trait CurrencyRepository: Send + Sync {
-
     // =========================================================================
     // Core CRUD Operations
     // =========================================================================
@@ -90,7 +92,11 @@ pub trait CurrencyRepository: Send + Sync {
     async fn list(&self, params: CurrencyPaginationParams) -> Result<CurrencyPaginatedResult>;
 
     /// List currency with pagination and filters
-    async fn list_with_filters(&self, params: CurrencyPaginationParams, filters: CurrencyFilter) -> Result<CurrencyPaginatedResult>;
+    async fn list_with_filters(
+        &self,
+        params: CurrencyPaginationParams,
+        filters: CurrencyFilter,
+    ) -> Result<CurrencyPaginatedResult>;
 
     /// Count all currency entities
     async fn count(&self) -> Result<u64>;
@@ -112,7 +118,10 @@ pub trait CurrencyRepository: Send + Sync {
     async fn restore(&self, id: &str) -> Result<Option<Currency>>;
 
     /// List soft-deleted currency entities
-    async fn list_deleted(&self, params: CurrencyPaginationParams) -> Result<CurrencyPaginatedResult>;
+    async fn list_deleted(
+        &self,
+        params: CurrencyPaginationParams,
+    ) -> Result<CurrencyPaginatedResult>;
 
     /// Empty trash (permanently delete all soft-deleted entities)
     async fn empty_trash(&self) -> Result<u64>;

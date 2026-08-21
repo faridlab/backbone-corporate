@@ -29,23 +29,29 @@ pub fn d(y: i32, m: u32, day: u32) -> NaiveDate {
 /// Ensure the standard currencies exist (IDR 0 dp, USD 2 dp). Safe to call in every test.
 pub async fn seed_std_currencies(pool: &PgPool) {
     sqlx::query(
-        r#"INSERT INTO corporate.currencies (id, iso_code, name, decimal_places, is_active)
-           VALUES (gen_random_uuid(),'IDR','Indonesian Rupiah',0,true),
-                  (gen_random_uuid(),'USD','US Dollar',2,true)
+        r#"INSERT INTO corporate.currencies (id, iso_code, name, decimal_places, status)
+           VALUES (gen_random_uuid(),'IDR','Indonesian Rupiah',0,'active'),
+                  (gen_random_uuid(),'USD','US Dollar',2,'active')
            ON CONFLICT (iso_code) WHERE (metadata->>'deleted_at') IS NULL DO NOTHING"#,
     )
-    .execute(pool).await.expect("seed std currencies");
+    .execute(pool)
+    .await
+    .expect("seed std currencies");
 }
 
 /// Seed one currency with an explicit code + minor-unit precision. Returns the code.
 pub async fn currency(pool: &PgPool, iso: &str, name: &str, decimal_places: i32) -> String {
     sqlx::query(
-        r#"INSERT INTO corporate.currencies (id, iso_code, name, decimal_places, is_active)
-           VALUES (gen_random_uuid(),$1,$2,$3,true)
+        r#"INSERT INTO corporate.currencies (id, iso_code, name, decimal_places, status)
+           VALUES (gen_random_uuid(),$1,$2,$3,'active')
            ON CONFLICT (iso_code) WHERE (metadata->>'deleted_at') IS NULL DO NOTHING"#,
     )
-    .bind(iso).bind(name).bind(decimal_places)
-    .execute(pool).await.expect("seed currency");
+    .bind(iso)
+    .bind(name)
+    .bind(decimal_places)
+    .execute(pool)
+    .await
+    .expect("seed currency");
     iso.to_string()
 }
 

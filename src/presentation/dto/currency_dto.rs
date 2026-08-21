@@ -5,9 +5,9 @@
 //! DTOs provide a clean separation between domain entities and API
 //! representations, with validation and OpenAPI documentation support.
 
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use chrono::{DateTime, Utc};
 
 #[cfg(feature = "openapi")]
 #[cfg(feature = "openapi")]
@@ -16,8 +16,9 @@ use utoipa::ToSchema;
 #[cfg(feature = "validation")]
 use validator::Validate;
 
-use crate::domain::entity::Currency;
 use crate::domain::entity::AuditMetadata;
+use crate::domain::entity::Currency;
+use crate::domain::entity::CurrencyStatus;
 
 // =============================================================================
 // Create DTO
@@ -45,9 +46,7 @@ pub struct CreateCurrencyDto {
     #[cfg_attr(feature = "openapi", schema(example = 42))]
     #[serde(alias = "decimal_places")]
     pub decimal_places: i32,
-    #[cfg_attr(feature = "openapi", schema(example = true))]
-    #[serde(alias = "is_active")]
-    pub is_active: bool,
+    pub status: CurrencyStatus,
 }
 
 // =============================================================================
@@ -76,9 +75,7 @@ pub struct UpdateCurrencyDto {
     #[cfg_attr(feature = "openapi", schema(example = 42))]
     #[serde(alias = "decimal_places")]
     pub decimal_places: i32,
-    #[cfg_attr(feature = "openapi", schema(example = true))]
-    #[serde(alias = "is_active")]
-    pub is_active: bool,
+    pub status: CurrencyStatus,
 }
 
 // =============================================================================
@@ -108,15 +105,18 @@ pub struct PatchCurrencyDto {
     #[cfg_attr(feature = "openapi", schema(example = 42))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "decimal_places")]
     pub decimal_places: Option<i32>,
-    #[cfg_attr(feature = "openapi", schema(example = true))]
-    #[serde(skip_serializing_if = "Option::is_none", alias = "is_active")]
-    pub is_active: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub status: Option<CurrencyStatus>,
 }
 
 impl PatchCurrencyDto {
     /// Check if any field is set
     pub fn has_changes(&self) -> bool {
-        self.iso_code.is_some() || self.name.is_some() || self.symbol.is_some() || self.decimal_places.is_some() || self.is_active.is_some()
+        self.iso_code.is_some()
+            || self.name.is_some()
+            || self.symbol.is_some()
+            || self.decimal_places.is_some()
+            || self.status.is_some()
     }
 }
 
@@ -132,7 +132,10 @@ impl PatchCurrencyDto {
 #[cfg_attr(feature = "openapi", derive(ToSchema))]
 #[serde(rename_all = "camelCase")]
 pub struct CurrencyResponseDto {
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
+    #[cfg_attr(
+        feature = "openapi",
+        schema(example = "550e8400-e29b-41d4-a716-446655440000")
+    )]
     pub id: Uuid,
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     pub iso_code: String,
@@ -141,8 +144,7 @@ pub struct CurrencyResponseDto {
     pub symbol: Option<String>,
     #[cfg_attr(feature = "openapi", schema(example = 42))]
     pub decimal_places: i32,
-    #[cfg_attr(feature = "openapi", schema(example = true))]
-    pub is_active: bool,
+    pub status: CurrencyStatus,
     pub metadata: AuditMetadata,
 }
 
@@ -218,7 +220,7 @@ impl From<Currency> for CurrencyResponseDto {
             name: entity.name,
             symbol: entity.symbol,
             decimal_places: entity.decimal_places,
-            is_active: entity.is_active,
+            status: entity.status,
             metadata: entity.metadata,
         }
     }
@@ -245,7 +247,7 @@ impl From<CreateCurrencyDto> for Currency {
             name: dto.name,
             symbol: dto.symbol,
             decimal_places: dto.decimal_places,
-            is_active: dto.is_active,
+            status: dto.status,
             metadata: AuditMetadata::default(),
         }
     }
@@ -259,7 +261,7 @@ impl From<&Currency> for CurrencyResponseDto {
             name: entity.name.clone(),
             symbol: entity.symbol.clone(),
             decimal_places: entity.decimal_places.clone(),
-            is_active: entity.is_active.clone(),
+            status: entity.status.clone(),
             metadata: entity.metadata.clone(),
         }
     }
@@ -277,7 +279,7 @@ impl backbone_core::ApplyUpdateDto<UpdateCurrencyDto> for Currency {
         self.name = dto.name;
         self.symbol = dto.symbol;
         self.decimal_places = dto.decimal_places;
-        self.is_active = dto.is_active;
+        self.status = dto.status;
         Ok(self)
     }
 }
@@ -290,4 +292,3 @@ impl backbone_core::ApplyUpdateDto<UpdateCurrencyDto> for Currency {
 // Add custom DTOs specific to Currency here.
 // This section will be preserved during regeneration.
 // >>> END CUSTOM DTOs
-

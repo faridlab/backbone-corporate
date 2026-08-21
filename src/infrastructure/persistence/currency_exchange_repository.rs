@@ -28,7 +28,9 @@ pub struct CurrencyExchangeRepository(
 
 impl std::ops::Deref for CurrencyExchangeRepository {
     type Target = backbone_orm::GenericCrudRepository<CurrencyExchange, backbone_orm::SoftDelete>;
-    fn deref(&self) -> &Self::Target { &self.0 }
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
 }
 
 impl CurrencyExchangeRepository {
@@ -48,7 +50,6 @@ impl CurrencyExchangeRepository {
 /// wrapper was removed to keep one source of truth. The `set_config` SQL itself still lives in the
 /// framework's persistence layer, not corporate's service, so the 4-layer rule holds.)
 
-
 /// The exact row an FX-rate insert writes.
 pub struct NewCurrencyExchangeRow {
     pub id: Uuid,
@@ -58,6 +59,8 @@ pub struct NewCurrencyExchangeRow {
     pub rate: Decimal,
     pub effective_from: NaiveDate,
     pub effective_to: Option<NaiveDate>,
+    pub rate_type: crate::domain::entity::RateType,
+    pub source: Option<String>,
 }
 
 /// FX rate SQL. Lives here (not in the service) per the module's 4-layer rule.
@@ -82,8 +85,13 @@ impl CurrencyExchangeRepository {
                  AND $4 <= COALESCE(effective_to, DATE '9999-12-31')
                LIMIT 1"#,
         )
-        .bind(from).bind(to).bind(company_id).bind(effective_from).bind(effective_to)
-        .fetch_optional(conn).await
+        .bind(from)
+        .bind(to)
+        .bind(company_id)
+        .bind(effective_from)
+        .bind(effective_to)
+        .fetch_optional(conn)
+        .await
     }
 
     /// Insert a rate row on the caller's scoped tx.
@@ -94,28 +102,44 @@ impl CurrencyExchangeRepository {
     ) -> Result<(), sqlx::Error> {
         sqlx::query(
             r#"INSERT INTO corporate.currency_exchanges
-                 (id, company_id, from_currency, to_currency, rate, effective_from, effective_to)
-               VALUES ($1,$2,$3,$4,$5,$6,$7)"#,
+                 (id, company_id, from_currency, to_currency, rate, effective_from, effective_to,
+                  rate_type, source)
+               VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)"#,
         )
-        .bind(r.id).bind(r.company_id).bind(&r.from_currency).bind(&r.to_currency).bind(r.rate)
-        .bind(r.effective_from).bind(r.effective_to)
-        .execute(conn).await?;
+        .bind(r.id)
+        .bind(r.company_id)
+        .bind(&r.from_currency)
+        .bind(&r.to_currency)
+        .bind(r.rate)
+        .bind(r.effective_from)
+        .bind(r.effective_to)
+        .bind(r.rate_type)
+        .bind(&r.source)
+        .execute(conn)
+        .await?;
         Ok(())
     }
 
-    /// The effective rate (+ its row id) for a directed pair on a date, or None. Company scope wins
-    /// over global; among a scope the most recent window wins (overlap is prevented on write). Runs
-    /// on the caller's tx, which already carries `app.company_id` when scoped; the SQL predicate
-    /// keeps the company-wins-over-global ordering explicit as defense-in-depth.
+    /// The rate in force for a directed pair on a date (+ its row id and effective_from), or None.
+    /// Company scope wins over global; among a scope the most recent window wins (overlap is
+    /// prevented on write). Runs on the caller's tx, which already carries `app.company_id` when
+    /// scoped; the SQL predicate keeps the company-wins-over-global ordering explicit as
+    /// defense-in-depth.
+    ///
+    /// "In force on the date" IS the latest-on-or-before read on a gapless chain: among windows
+    /// that started on or before the date, only the latest one still covers it (its predecessor
+    /// ended the day before it started). A window that closed before the date does NOT cover it —
+    /// a deliberately retired rate must not resurrect through a gap — so a gap refuses (None)
+    /// rather than guessing. `FxService::spot_on_or_before` documents the consumer contract.
     pub async fn find_effective_rate_tx(
         &self,
         conn: &mut PgConnection,
         from: &str,
         to: &str,
         on_date: NaiveDate,
-    ) -> Result<Option<(Decimal, Uuid)>, sqlx::Error> {
+    ) -> Result<Option<(Decimal, Uuid, NaiveDate)>, sqlx::Error> {
         let row = sqlx::query(
-            r#"SELECT id, rate FROM corporate.currency_exchanges
+            r#"SELECT id, rate, effective_from FROM corporate.currency_exchanges
                WHERE from_currency=$1 AND to_currency=$2
                  AND (company_id IS NOT DISTINCT FROM NULLIF(current_setting('app.company_id', true), '')::uuid
                       OR company_id IS NULL)
@@ -127,7 +151,13 @@ impl CurrencyExchangeRepository {
         )
         .bind(from).bind(to).bind(on_date)
         .fetch_optional(conn).await?;
-        Ok(row.map(|r| (r.get::<Decimal, _>("rate"), r.get::<Uuid, _>("id"))))
+        Ok(row.map(|r| {
+            (
+                r.get::<Decimal, _>("rate"),
+                r.get::<Uuid, _>("id"),
+                r.get::<NaiveDate, _>("effective_from"),
+            )
+        }))
     }
 }
 

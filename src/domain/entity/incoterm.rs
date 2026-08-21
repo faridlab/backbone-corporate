@@ -1,8 +1,8 @@
+use super::AuditMetadata;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use uuid::Uuid;
-use super::AuditMetadata;
 
 /// Strongly-typed ID for Incoterm
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -10,9 +10,15 @@ use super::AuditMetadata;
 pub struct IncotermId(pub Uuid);
 
 impl IncotermId {
-    pub fn new(id: Uuid) -> Self { Self(id) }
-    pub fn generate() -> Self { Self(Uuid::new_v4()) }
-    pub fn into_inner(self) -> Uuid { self.0 }
+    pub fn new(id: Uuid) -> Self {
+        Self(id)
+    }
+    pub fn generate() -> Self {
+        Self(Uuid::new_v4())
+    }
+    pub fn into_inner(self) -> Uuid {
+        self.0
+    }
 }
 
 impl std::fmt::Display for IncotermId {
@@ -29,20 +35,28 @@ impl std::str::FromStr for IncotermId {
 }
 
 impl From<Uuid> for IncotermId {
-    fn from(id: Uuid) -> Self { Self(id) }
+    fn from(id: Uuid) -> Self {
+        Self(id)
+    }
 }
 
 impl From<IncotermId> for Uuid {
-    fn from(id: IncotermId) -> Self { id.0 }
+    fn from(id: IncotermId) -> Self {
+        id.0
+    }
 }
 
 impl AsRef<Uuid> for IncotermId {
-    fn as_ref(&self) -> &Uuid { &self.0 }
+    fn as_ref(&self) -> &Uuid {
+        &self.0
+    }
 }
 
 impl std::ops::Deref for IncotermId {
     type Target = Uuid;
-    fn deref(&self) -> &Self::Target { &self.0 }
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
@@ -59,7 +73,7 @@ pub struct Incoterm {
 impl Incoterm {
     /// Create a builder for Incoterm
     pub fn builder() -> IncotermBuilder {
-        IncotermBuilder::default()
+        <IncotermBuilder as Default>::default()
     }
 
     /// Create a new Incoterm with required fields
@@ -123,7 +137,6 @@ impl Incoterm {
         self.metadata.deleted_by.as_ref()
     }
 
-
     // ==========================================================
     // Partial Update
     // ==========================================================
@@ -133,13 +146,19 @@ impl Incoterm {
         for (key, value) in fields {
             match key.as_str() {
                 "code" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.code = v; }
+                    if let Ok(v) = serde_json::from_value(value) {
+                        self.code = v;
+                    }
                 }
                 "name" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.name = v; }
+                    if let Ok(v) = serde_json::from_value(value) {
+                        self.name = v;
+                    }
                 }
                 "is_active" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.is_active = v; }
+                    if let Ok(v) = serde_json::from_value(value) {
+                        self.is_active = v;
+                    }
                 }
                 _ => {} // ignore unknown fields
             }

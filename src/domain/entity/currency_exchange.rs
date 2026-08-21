@@ -1,9 +1,11 @@
-use chrono::{DateTime, Utc, NaiveDate};
+use chrono::{DateTime, NaiveDate, Utc};
+use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use uuid::Uuid;
-use rust_decimal::Decimal;
+
 use super::AuditMetadata;
+use super::RateType;
 
 /// Strongly-typed ID for CurrencyExchange
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -11,9 +13,15 @@ use super::AuditMetadata;
 pub struct CurrencyExchangeId(pub Uuid);
 
 impl CurrencyExchangeId {
-    pub fn new(id: Uuid) -> Self { Self(id) }
-    pub fn generate() -> Self { Self(Uuid::new_v4()) }
-    pub fn into_inner(self) -> Uuid { self.0 }
+    pub fn new(id: Uuid) -> Self {
+        Self(id)
+    }
+    pub fn generate() -> Self {
+        Self(Uuid::new_v4())
+    }
+    pub fn into_inner(self) -> Uuid {
+        self.0
+    }
 }
 
 impl std::fmt::Display for CurrencyExchangeId {
@@ -30,20 +38,28 @@ impl std::str::FromStr for CurrencyExchangeId {
 }
 
 impl From<Uuid> for CurrencyExchangeId {
-    fn from(id: Uuid) -> Self { Self(id) }
+    fn from(id: Uuid) -> Self {
+        Self(id)
+    }
 }
 
 impl From<CurrencyExchangeId> for Uuid {
-    fn from(id: CurrencyExchangeId) -> Self { id.0 }
+    fn from(id: CurrencyExchangeId) -> Self {
+        id.0
+    }
 }
 
 impl AsRef<Uuid> for CurrencyExchangeId {
-    fn as_ref(&self) -> &Uuid { &self.0 }
+    fn as_ref(&self) -> &Uuid {
+        &self.0
+    }
 }
 
 impl std::ops::Deref for CurrencyExchangeId {
     type Target = Uuid;
-    fn deref(&self) -> &Self::Target { &self.0 }
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
@@ -55,6 +71,8 @@ pub struct CurrencyExchange {
     pub rate: Decimal,
     pub effective_from: NaiveDate,
     pub effective_to: Option<NaiveDate>,
+    pub rate_type: RateType,
+    pub source: Option<String>,
     #[serde(default)]
     #[sqlx(json)]
     pub metadata: AuditMetadata,
@@ -63,11 +81,17 @@ pub struct CurrencyExchange {
 impl CurrencyExchange {
     /// Create a builder for CurrencyExchange
     pub fn builder() -> CurrencyExchangeBuilder {
-        CurrencyExchangeBuilder::default()
+        <CurrencyExchangeBuilder as Default>::default()
     }
 
     /// Create a new CurrencyExchange with required fields
-    pub fn new(from_currency: String, to_currency: String, rate: Decimal, effective_from: NaiveDate) -> Self {
+    pub fn new(
+        from_currency: String,
+        to_currency: String,
+        rate: Decimal,
+        effective_from: NaiveDate,
+        rate_type: RateType,
+    ) -> Self {
         Self {
             id: Uuid::new_v4(),
             company_id: None,
@@ -76,6 +100,8 @@ impl CurrencyExchange {
             rate,
             effective_from,
             effective_to: None,
+            rate_type,
+            source: None,
             metadata: AuditMetadata::default(),
         }
     }
@@ -130,7 +156,6 @@ impl CurrencyExchange {
         self.metadata.deleted_by.as_ref()
     }
 
-
     // ==========================================================
     // Fluent Setters (with_* for optional fields)
     // ==========================================================
@@ -147,6 +172,12 @@ impl CurrencyExchange {
         self
     }
 
+    /// Set the source field (chainable)
+    pub fn with_source(mut self, value: String) -> Self {
+        self.source = Some(value);
+        self
+    }
+
     // ==========================================================
     // Partial Update
     // ==========================================================
@@ -156,22 +187,44 @@ impl CurrencyExchange {
         for (key, value) in fields {
             match key.as_str() {
                 "company_id" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.company_id = v; }
+                    if let Ok(v) = serde_json::from_value(value) {
+                        self.company_id = v;
+                    }
                 }
                 "from_currency" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.from_currency = v; }
+                    if let Ok(v) = serde_json::from_value(value) {
+                        self.from_currency = v;
+                    }
                 }
                 "to_currency" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.to_currency = v; }
+                    if let Ok(v) = serde_json::from_value(value) {
+                        self.to_currency = v;
+                    }
                 }
                 "rate" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.rate = v; }
+                    if let Ok(v) = serde_json::from_value(value) {
+                        self.rate = v;
+                    }
                 }
                 "effective_from" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.effective_from = v; }
+                    if let Ok(v) = serde_json::from_value(value) {
+                        self.effective_from = v;
+                    }
                 }
                 "effective_to" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.effective_to = v; }
+                    if let Ok(v) = serde_json::from_value(value) {
+                        self.effective_to = v;
+                    }
+                }
+                "rate_type" => {
+                    if let Ok(v) = serde_json::from_value(value) {
+                        self.rate_type = v;
+                    }
+                }
+                "source" => {
+                    if let Ok(v) = serde_json::from_value(value) {
+                        self.source = v;
+                    }
                 }
                 _ => {} // ignore unknown fields
             }
@@ -228,6 +281,7 @@ impl backbone_orm::EntityRepoMeta for CurrencyExchange {
         let mut m = std::collections::HashMap::new();
         m.insert("id".to_string(), "uuid".to_string());
         m.insert("company_id".to_string(), "uuid".to_string());
+        m.insert("rate_type".to_string(), "rate_type".to_string());
         m
     }
     fn search_fields() -> &'static [&'static str] {
@@ -250,6 +304,8 @@ pub struct CurrencyExchangeBuilder {
     rate: Option<Decimal>,
     effective_from: Option<NaiveDate>,
     effective_to: Option<NaiveDate>,
+    rate_type: Option<RateType>,
+    source: Option<String>,
 }
 
 impl CurrencyExchangeBuilder {
@@ -289,14 +345,32 @@ impl CurrencyExchangeBuilder {
         self
     }
 
+    /// Set the rate_type field (default: `RateType::default()`)
+    pub fn rate_type(mut self, value: RateType) -> Self {
+        self.rate_type = Some(value);
+        self
+    }
+
+    /// Set the source field (optional)
+    pub fn source(mut self, value: String) -> Self {
+        self.source = Some(value);
+        self
+    }
+
     /// Build the CurrencyExchange entity
     ///
     /// Returns Err if any required field without a default is missing.
     pub fn build(self) -> Result<CurrencyExchange, String> {
-        let from_currency = self.from_currency.ok_or_else(|| "from_currency is required".to_string())?;
-        let to_currency = self.to_currency.ok_or_else(|| "to_currency is required".to_string())?;
+        let from_currency = self
+            .from_currency
+            .ok_or_else(|| "from_currency is required".to_string())?;
+        let to_currency = self
+            .to_currency
+            .ok_or_else(|| "to_currency is required".to_string())?;
         let rate = self.rate.ok_or_else(|| "rate is required".to_string())?;
-        let effective_from = self.effective_from.ok_or_else(|| "effective_from is required".to_string())?;
+        let effective_from = self
+            .effective_from
+            .ok_or_else(|| "effective_from is required".to_string())?;
 
         Ok(CurrencyExchange {
             id: Uuid::new_v4(),
@@ -306,6 +380,8 @@ impl CurrencyExchangeBuilder {
             rate,
             effective_from,
             effective_to: self.effective_to,
+            rate_type: self.rate_type.unwrap_or_default(),
+            source: self.source,
             metadata: AuditMetadata::default(),
         })
     }

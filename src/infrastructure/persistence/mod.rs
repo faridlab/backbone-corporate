@@ -4,31 +4,30 @@
 //!
 //! Uses backbone-orm's `DatabaseOperations<T>` trait.
 
-mod currency_repository;
 mod currency_exchange_repository;
+mod currency_repository;
 mod incoterm_repository;
 mod terms_and_conditions_repository;
 mod territory_repository;
 
 // Custom persistence modules
 // <<< CUSTOM
+pub use currency_exchange_repository::NewCurrencyExchangeRow;
 // END CUSTOM
 
 // Re-exports
-pub use currency_repository::CurrencyRepository;
 pub use currency_exchange_repository::CurrencyExchangeRepository;
+pub use currency_repository::CurrencyRepository;
 pub use incoterm_repository::IncotermRepository;
 pub use terms_and_conditions_repository::TermsAndConditionsRepository;
 pub use territory_repository::TerritoryRepository;
 
 // Re-export backbone-orm types
 pub use backbone_orm::repository::{
-    DatabaseOperations, PostgresRepository,
-    PaginationParams, PaginationInfo, PaginatedResult,
-    FilterParams, FilterCondition, SortParams, SortDirection,
+    DatabaseOperations, FilterCondition, FilterParams, PaginatedResult, PaginationInfo,
+    PaginationParams, PostgresRepository, SortDirection, SortParams,
 };
 
 // Re-export custom persistence types
 // <<< CUSTOM
-pub use currency_exchange_repository::NewCurrencyExchangeRow;
 // END CUSTOM

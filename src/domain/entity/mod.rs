@@ -4,7 +4,9 @@
 
 pub mod currency;
 pub mod currency_exchange;
+pub mod currency_status;
 pub mod incoterm;
+pub mod rate_type;
 pub mod terms_and_conditions;
 pub mod territory;
 
@@ -15,9 +17,11 @@ pub use currency::CurrencyId;
 pub use currency_exchange::CurrencyExchange;
 pub use currency_exchange::CurrencyExchangeBuilder;
 pub use currency_exchange::CurrencyExchangeId;
+pub use currency_status::CurrencyStatus;
 pub use incoterm::Incoterm;
 pub use incoterm::IncotermBuilder;
 pub use incoterm::IncotermId;
+pub use rate_type::RateType;
 pub use terms_and_conditions::TermsAndConditions;
 pub use terms_and_conditions::TermsAndConditionsBuilder;
 pub use terms_and_conditions::TermsAndConditionsId;
@@ -52,9 +56,9 @@ pub trait Entity: Debug + Clone {
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 #[cfg(feature = "openapi")]
 use utoipa::ToSchema;
+use uuid::Uuid;
 
 /// Audit metadata stored as JSONB in the database
 ///

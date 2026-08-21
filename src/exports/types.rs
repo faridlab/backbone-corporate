@@ -5,11 +5,11 @@
 //! These DTOs are the ONLY types other modules should use.
 //! They are decoupled from internal domain entities.
 
+use crate::domain::entity::*;
+use chrono::{DateTime, NaiveDate, Utc};
+use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use chrono::{DateTime, Utc, NaiveDate};
-use rust_decimal::Decimal;
-use crate::domain::entity::*;
 
 // ============================================================================
 // CURRENCY TYPES
@@ -53,7 +53,7 @@ pub struct CurrencyDto {
     pub name: String,
     pub symbol: Option<String>,
     pub decimal_places: i32,
-    pub is_active: bool,
+    pub status: CurrencyStatus,
     pub metadata: serde_json::Value,
 }
 
@@ -62,6 +62,7 @@ pub struct CurrencyDto {
 pub struct CurrencySummary {
     pub id: CurrencyId,
     pub name: String,
+    pub status: CurrencyStatus,
 }
 
 /// Reference to Currency for foreign key relationships
@@ -114,6 +115,8 @@ pub struct CurrencyExchangeDto {
     pub rate: Decimal,
     pub effective_from: NaiveDate,
     pub effective_to: Option<NaiveDate>,
+    pub rate_type: RateType,
+    pub source: Option<String>,
     pub metadata: serde_json::Value,
 }
 
@@ -341,5 +344,22 @@ pub struct RegisterRate {
     pub rate: Decimal,
     pub effective_from: NaiveDate,
     pub effective_to: Option<NaiveDate>,
+    /// What the rate is; absent means a plain spot rate.
+    #[serde(default)]
+    pub rate_type: Option<RateType>,
+    /// Where the rate came from (provenance); absent means unstamped.
+    #[serde(default)]
+    pub source: Option<String>,
+}
+
+/// A raw spot-rate read: the rate in force at (or immediately before) a date,
+/// the row it came from, and the date that row became effective. No amount is
+/// converted and no rounding is applied — the consumer stamps, it does not
+/// re-derive.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SpotRate {
+    pub rate: Decimal,
+    pub rate_id: Uuid,
+    pub effective_from: NaiveDate,
 }
 // <<< CUSTOM TYPES END >>>

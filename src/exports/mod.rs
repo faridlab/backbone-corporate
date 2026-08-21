@@ -8,17 +8,17 @@
 //! ## Usage from other modules
 //!
 //! ```text
-//! use corporate::exports::{CurrencyDto, CorporateQueryService};
+//! use corporate::exports::{CurrencyDto};
 //! ```
 
-mod types;
-mod services;
 mod events;
+mod services;
+mod types;
 
 // Re-export all public types
-pub use types::*;
-pub use services::*;
 pub use events::*;
+pub use services::*;
+pub use types::*;
 
 // ============================================================================
 // EXPORT SUMMARY
@@ -42,9 +42,6 @@ pub use events::*;
 /// - `TerritoryDto` - Data transfer object for Territory
 /// - `TerritorySummary` - Summary view of Territory
 /// - `TerritoryId` - Type-safe ID wrapper
-///
-/// ## Public Services
-/// - `CorporateQueryService` - Read-only queries
 ///
 /// ## Public Events
 /// - `CurrencyCreatedEvent` - Published when Currency is created

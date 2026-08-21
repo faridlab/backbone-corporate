@@ -79,4 +79,3 @@ async fn test_territory_api() {
         panic!("{} tests failed", failed.len());
     }
 }
-

@@ -18,12 +18,12 @@
 #![allow(unused_imports)]
 
 // Generated modules
-pub mod domain;
-pub mod infrastructure;
 pub mod application;
+pub mod domain;
+pub mod exports;
+pub mod infrastructure;
 pub mod presentation;
 pub mod seeders;
-pub mod exports;
 
 // Re-exports for convenience - Domain entities
 pub use domain::entity::*;
@@ -32,8 +32,8 @@ pub use domain::entity::*;
 pub use infrastructure::persistence::*;
 
 // Re-exports - Application services
-pub use application::service::CurrencyService;
 pub use application::service::CurrencyExchangeService;
+pub use application::service::CurrencyService;
 pub use application::service::IncotermService;
 pub use application::service::TermsAndConditionsService;
 pub use application::service::TerritoryService;
@@ -41,9 +41,9 @@ pub use application::service::TerritoryService;
 // Re-exports - Workflows
 pub use application::workflows::*;
 
-use std::sync::Arc;
 use axum::Router;
 use sqlx::PgPool;
+use std::sync::Arc;
 
 /// Corporate module configuration
 ///
@@ -81,18 +81,19 @@ impl CorporateModule {
     /// real deployment; use this only in trusted/admin/seeding contexts.
     pub fn all_crud_routes(&self) -> Router {
         use presentation::http::{
-            create_currency_routes,
-            create_currency_exchange_routes,
-            create_incoterm_routes,
-            create_terms_and_conditions_routes,
-            create_territory_routes,
+            create_currency_exchange_routes, create_currency_routes, create_incoterm_routes,
+            create_terms_and_conditions_routes, create_territory_routes,
         };
 
         Router::new()
             .merge(create_currency_routes(self.currency_service.clone()))
-            .merge(create_currency_exchange_routes(self.currency_exchange_service.clone()))
+            .merge(create_currency_exchange_routes(
+                self.currency_exchange_service.clone(),
+            ))
             .merge(create_incoterm_routes(self.incoterm_service.clone()))
-            .merge(create_terms_and_conditions_routes(self.terms_and_conditions_service.clone()))
+            .merge(create_terms_and_conditions_routes(
+                self.terms_and_conditions_service.clone(),
+            ))
             .merge(create_territory_routes(self.territory_service.clone()))
     }
 
@@ -101,10 +102,39 @@ impl CorporateModule {
     /// mount exposes unguarded writes. Compose a guarded router (read + validated
     /// writes) for production, or call `all_crud_routes()` to opt into the full
     /// unguarded surface explicitly.
-    #[deprecated(note = "mounts unvalidated generic CRUD on every entity; compose a guarded router for production, or call all_crud_routes() for the intentional full/unguarded surface")]
+    #[deprecated(
+        note = "mounts unvalidated generic CRUD; prefer readonly_routes() + validated writes, or all_crud_routes() for the full/unguarded surface"
+    )]
     pub fn routes(&self) -> Router {
         self.all_crud_routes()
     }
+
+    /// Read-only routes for every entity (GET endpoints only) — the safe base.
+    ///
+    /// Generic mutation can't reach here, so this surface cannot bypass a
+    /// validated write service's invariants. Use this as the production base and
+    /// merge validated write routes (or a write service's HTTP layer) onto it.
+    pub fn readonly_routes(&self) -> Router {
+        use presentation::http::{
+            create_currency_exchange_read_routes, create_currency_read_routes,
+            create_incoterm_read_routes, create_terms_and_conditions_read_routes,
+            create_territory_read_routes,
+        };
+
+        Router::new()
+            .merge(create_currency_read_routes(self.currency_service.clone()))
+            .merge(create_currency_exchange_read_routes(
+                self.currency_exchange_service.clone(),
+            ))
+            .merge(create_incoterm_read_routes(self.incoterm_service.clone()))
+            .merge(create_terms_and_conditions_read_routes(
+                self.terms_and_conditions_service.clone(),
+            ))
+            .merge(create_territory_read_routes(self.territory_service.clone()))
+    }
+
+    // <<< CUSTOM METHODS
+    // END CUSTOM
 }
 
 /// Builder for CorporateModule
@@ -115,9 +145,7 @@ pub struct CorporateModuleBuilder {
 impl CorporateModuleBuilder {
     /// Create a new builder
     pub fn new() -> Self {
-        Self {
-            db_pool: None,
-        }
+        Self { db_pool: None }
     }
 
     /// Set the database connection pool
@@ -131,28 +159,41 @@ impl CorporateModuleBuilder {
 
     /// Build the module with configured dependencies
     pub fn build(self) -> anyhow::Result<CorporateModule> {
-        let db_pool = self.db_pool
+        let db_pool = self
+            .db_pool
             .ok_or_else(|| anyhow::anyhow!("Database pool not configured"))?;
 
         // Currency service
         let currency_repository = Arc::new(CurrencyRepository::new(db_pool.clone()));
-        let currency_service = Arc::new(CurrencyService::with_repository(currency_repository.clone()));
+        let currency_service = Arc::new(CurrencyService::with_repository(
+            currency_repository.clone(),
+        ));
 
         // CurrencyExchange service
-        let currency_exchange_repository = Arc::new(CurrencyExchangeRepository::new(db_pool.clone()));
-        let currency_exchange_service = Arc::new(CurrencyExchangeService::with_repository(currency_exchange_repository.clone()));
+        let currency_exchange_repository =
+            Arc::new(CurrencyExchangeRepository::new(db_pool.clone()));
+        let currency_exchange_service = Arc::new(CurrencyExchangeService::with_repository(
+            currency_exchange_repository.clone(),
+        ));
 
         // Incoterm service
         let incoterm_repository = Arc::new(IncotermRepository::new(db_pool.clone()));
-        let incoterm_service = Arc::new(IncotermService::with_repository(incoterm_repository.clone()));
+        let incoterm_service = Arc::new(IncotermService::with_repository(
+            incoterm_repository.clone(),
+        ));
 
         // TermsAndConditions service
-        let terms_and_conditions_repository = Arc::new(TermsAndConditionsRepository::new(db_pool.clone()));
-        let terms_and_conditions_service = Arc::new(TermsAndConditionsService::with_repository(terms_and_conditions_repository.clone()));
+        let terms_and_conditions_repository =
+            Arc::new(TermsAndConditionsRepository::new(db_pool.clone()));
+        let terms_and_conditions_service = Arc::new(TermsAndConditionsService::with_repository(
+            terms_and_conditions_repository.clone(),
+        ));
 
         // Territory service
         let territory_repository = Arc::new(TerritoryRepository::new(db_pool.clone()));
-        let territory_service = Arc::new(TerritoryService::with_repository(territory_repository.clone()));
+        let territory_service = Arc::new(TerritoryService::with_repository(
+            territory_repository.clone(),
+        ));
 
         // <<< CUSTOM
         // FX engine (user-owned; survives regen). Constructed from the same pool

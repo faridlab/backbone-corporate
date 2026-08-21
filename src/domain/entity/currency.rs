@@ -2,7 +2,9 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use uuid::Uuid;
+
 use super::AuditMetadata;
+use super::CurrencyStatus;
 
 /// Strongly-typed ID for Currency
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -10,9 +12,15 @@ use super::AuditMetadata;
 pub struct CurrencyId(pub Uuid);
 
 impl CurrencyId {
-    pub fn new(id: Uuid) -> Self { Self(id) }
-    pub fn generate() -> Self { Self(Uuid::new_v4()) }
-    pub fn into_inner(self) -> Uuid { self.0 }
+    pub fn new(id: Uuid) -> Self {
+        Self(id)
+    }
+    pub fn generate() -> Self {
+        Self(Uuid::new_v4())
+    }
+    pub fn into_inner(self) -> Uuid {
+        self.0
+    }
 }
 
 impl std::fmt::Display for CurrencyId {
@@ -29,20 +37,28 @@ impl std::str::FromStr for CurrencyId {
 }
 
 impl From<Uuid> for CurrencyId {
-    fn from(id: Uuid) -> Self { Self(id) }
+    fn from(id: Uuid) -> Self {
+        Self(id)
+    }
 }
 
 impl From<CurrencyId> for Uuid {
-    fn from(id: CurrencyId) -> Self { id.0 }
+    fn from(id: CurrencyId) -> Self {
+        id.0
+    }
 }
 
 impl AsRef<Uuid> for CurrencyId {
-    fn as_ref(&self) -> &Uuid { &self.0 }
+    fn as_ref(&self) -> &Uuid {
+        &self.0
+    }
 }
 
 impl std::ops::Deref for CurrencyId {
     type Target = Uuid;
-    fn deref(&self) -> &Self::Target { &self.0 }
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
@@ -52,7 +68,7 @@ pub struct Currency {
     pub name: String,
     pub symbol: Option<String>,
     pub decimal_places: i32,
-    pub is_active: bool,
+    pub status: CurrencyStatus,
     #[serde(default)]
     #[sqlx(json)]
     pub metadata: AuditMetadata,
@@ -61,18 +77,23 @@ pub struct Currency {
 impl Currency {
     /// Create a builder for Currency
     pub fn builder() -> CurrencyBuilder {
-        CurrencyBuilder::default()
+        <CurrencyBuilder as Default>::default()
     }
 
     /// Create a new Currency with required fields
-    pub fn new(iso_code: String, name: String, decimal_places: i32, is_active: bool) -> Self {
+    pub fn new(
+        iso_code: String,
+        name: String,
+        decimal_places: i32,
+        status: CurrencyStatus,
+    ) -> Self {
         Self {
             id: Uuid::new_v4(),
             iso_code,
             name,
             symbol: None,
             decimal_places,
-            is_active,
+            status,
             metadata: AuditMetadata::default(),
         }
     }
@@ -127,6 +148,10 @@ impl Currency {
         self.metadata.deleted_by.as_ref()
     }
 
+    /// Get the current status
+    pub fn status(&self) -> &CurrencyStatus {
+        &self.status
+    }
 
     // ==========================================================
     // Fluent Setters (with_* for optional fields)
@@ -147,19 +172,29 @@ impl Currency {
         for (key, value) in fields {
             match key.as_str() {
                 "iso_code" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.iso_code = v; }
+                    if let Ok(v) = serde_json::from_value(value) {
+                        self.iso_code = v;
+                    }
                 }
                 "name" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.name = v; }
+                    if let Ok(v) = serde_json::from_value(value) {
+                        self.name = v;
+                    }
                 }
                 "symbol" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.symbol = v; }
+                    if let Ok(v) = serde_json::from_value(value) {
+                        self.symbol = v;
+                    }
                 }
                 "decimal_places" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.decimal_places = v; }
+                    if let Ok(v) = serde_json::from_value(value) {
+                        self.decimal_places = v;
+                    }
                 }
-                "is_active" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.is_active = v; }
+                "status" => {
+                    if let Ok(v) = serde_json::from_value(value) {
+                        self.status = v;
+                    }
                 }
                 _ => {} // ignore unknown fields
             }
@@ -215,6 +250,7 @@ impl backbone_orm::EntityRepoMeta for Currency {
     fn column_types() -> std::collections::HashMap<String, String> {
         let mut m = std::collections::HashMap::new();
         m.insert("id".to_string(), "uuid".to_string());
+        m.insert("status".to_string(), "currency_status".to_string());
         m
     }
     fn search_fields() -> &'static [&'static str] {
@@ -232,7 +268,7 @@ pub struct CurrencyBuilder {
     name: Option<String>,
     symbol: Option<String>,
     decimal_places: Option<i32>,
-    is_active: Option<bool>,
+    status: Option<CurrencyStatus>,
 }
 
 impl CurrencyBuilder {
@@ -260,9 +296,9 @@ impl CurrencyBuilder {
         self
     }
 
-    /// Set the is_active field (default: `true`)
-    pub fn is_active(mut self, value: bool) -> Self {
-        self.is_active = Some(value);
+    /// Set the status field (default: `CurrencyStatus::default()`)
+    pub fn status(mut self, value: CurrencyStatus) -> Self {
+        self.status = Some(value);
         self
     }
 
@@ -270,7 +306,9 @@ impl CurrencyBuilder {
     ///
     /// Returns Err if any required field without a default is missing.
     pub fn build(self) -> Result<Currency, String> {
-        let iso_code = self.iso_code.ok_or_else(|| "iso_code is required".to_string())?;
+        let iso_code = self
+            .iso_code
+            .ok_or_else(|| "iso_code is required".to_string())?;
         let name = self.name.ok_or_else(|| "name is required".to_string())?;
 
         Ok(Currency {
@@ -279,7 +317,7 @@ impl CurrencyBuilder {
             name,
             symbol: self.symbol,
             decimal_places: self.decimal_places.unwrap_or(2),
-            is_active: self.is_active.unwrap_or(true),
+            status: self.status.unwrap_or_default(),
             metadata: AuditMetadata::default(),
         })
     }

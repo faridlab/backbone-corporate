@@ -25,7 +25,9 @@ pub struct CurrencyRepository(
 
 impl std::ops::Deref for CurrencyRepository {
     type Target = backbone_orm::GenericCrudRepository<Currency, backbone_orm::SoftDelete>;
-    fn deref(&self) -> &Self::Target { &self.0 }
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
 }
 
 impl CurrencyRepository {
@@ -47,10 +49,10 @@ impl CurrencyRepository {
         conn: &mut PgConnection,
         iso: &str,
     ) -> Result<Option<i32>, sqlx::Error> {
-        sqlx::query_scalar(
-            "SELECT decimal_places FROM corporate.currencies WHERE iso_code=$1",
-        )
-        .bind(iso).fetch_optional(conn).await
+        sqlx::query_scalar("SELECT decimal_places FROM corporate.currencies WHERE iso_code=$1")
+            .bind(iso)
+            .fetch_optional(conn)
+            .await
     }
 }
 

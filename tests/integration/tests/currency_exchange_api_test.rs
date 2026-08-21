@@ -30,6 +30,8 @@ impl TestDataGenerator for CurrencyExchangeTestData {
             "rate": 0,
             "effective_from": Utc::now().format("%Y-%m-%d").to_string(),
             "effective_to": null,
+            "rate_type": "spot",
+            "source": null,
             "metadata": json!({}),
         })
     }
@@ -44,6 +46,8 @@ impl TestDataGenerator for CurrencyExchangeTestData {
             "rate": 0,
             "effective_from": Utc::now().format("%Y-%m-%d").to_string(),
             "effective_to": null,
+            "rate_type": "spot",
+            "source": null,
             "metadata": json!({}),
         })
     }

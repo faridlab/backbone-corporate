@@ -5,6 +5,7 @@ mod common;
 use common::*;
 
 use backbone_corporate::application::service::fx_service::*;
+use backbone_corporate::domain::entity::RateType;
 use uuid::Uuid;
 
 // FIP-1 — no rate for the pair/date → NoRate, NOT a silent 1:1 or a zero. A consumer must not book a
@@ -14,8 +15,19 @@ async fn fip1_missing_rate_is_a_hard_signal() {
     let pool = pool().await;
     seed_std_currencies(&pool).await;
     let svc = FxService::new(pool.clone());
-    let r = svc.convert(Some(Uuid::new_v4()), dec("100"), "USD", "IDR", d(2020, 1, 1)).await;
-    assert!(matches!(r, Err(FxError::NoRate { .. })), "no rate must be an error, not a guess");
+    let r = svc
+        .convert(
+            Some(Uuid::new_v4()),
+            dec("100"),
+            "USD",
+            "IDR",
+            d(2020, 1, 1),
+        )
+        .await;
+    assert!(
+        matches!(r, Err(FxError::NoRate { .. })),
+        "no rate must be an error, not a guess"
+    );
 }
 
 // FIP-2 — MATURITY: two OVERLAPPING effective windows for one directed pair cannot both exist. `upsert_rate`
@@ -31,19 +43,41 @@ async fn fip2_overlapping_windows_refused() {
     let company = Uuid::new_v4();
 
     svc.upsert_rate(NewRate {
-        company_id: Some(company), from_currency: from.clone(), to_currency: to.clone(),
-        rate: dec("15000"), effective_from: d(2026, 1, 1), effective_to: Some(d(2026, 6, 30)),
-    }).await.unwrap();
+        company_id: Some(company),
+        from_currency: from.clone(),
+        to_currency: to.clone(),
+        rate: dec("15000"),
+        effective_from: d(2026, 1, 1),
+        effective_to: Some(d(2026, 6, 30)),
+        rate_type: RateType::Spot,
+        source: None,
+    })
+    .await
+    .unwrap();
 
     // A second window that OVERLAPS the first (2026-06 is inside both) — must be refused.
-    let clash = svc.upsert_rate(NewRate {
-        company_id: Some(company), from_currency: from.clone(), to_currency: to.clone(),
-        rate: dec("16000"), effective_from: d(2026, 6, 1), effective_to: None,
-    }).await;
-    assert!(matches!(clash, Err(FxError::OverlappingWindow { .. })), "an ambiguous rate window is refused");
+    let clash = svc
+        .upsert_rate(NewRate {
+            company_id: Some(company),
+            from_currency: from.clone(),
+            to_currency: to.clone(),
+            rate: dec("16000"),
+            effective_from: d(2026, 6, 1),
+            effective_to: None,
+            rate_type: RateType::Spot,
+            source: None,
+        })
+        .await;
+    assert!(
+        matches!(clash, Err(FxError::OverlappingWindow { .. })),
+        "an ambiguous rate window is refused"
+    );
 
     // The one surviving window still resolves deterministically.
-    let out = svc.convert(Some(company), dec("1"), &from, &to, d(2026, 6, 15)).await.unwrap();
+    let out = svc
+        .convert(Some(company), dec("1"), &from, &to, d(2026, 6, 15))
+        .await
+        .unwrap();
     assert_eq!(out.rate, dec("15000"));
 }
 
@@ -57,14 +91,33 @@ async fn fip3_adjacent_windows_allowed() {
     let svc = FxService::new(pool.clone());
     let company = Uuid::new_v4();
     svc.upsert_rate(NewRate {
-        company_id: Some(company), from_currency: from.clone(), to_currency: to.clone(),
-        rate: dec("15000"), effective_from: d(2025, 1, 1), effective_to: Some(d(2025, 12, 31)),
-    }).await.unwrap();
-    let ok = svc.upsert_rate(NewRate {
-        company_id: Some(company), from_currency: from.clone(), to_currency: to.clone(),
-        rate: dec("16000"), effective_from: d(2026, 1, 1), effective_to: None,
-    }).await;
-    assert!(ok.is_ok(), "a rate change (adjacent window) is the normal case");
+        company_id: Some(company),
+        from_currency: from.clone(),
+        to_currency: to.clone(),
+        rate: dec("15000"),
+        effective_from: d(2025, 1, 1),
+        effective_to: Some(d(2025, 12, 31)),
+        rate_type: RateType::Spot,
+        source: None,
+    })
+    .await
+    .unwrap();
+    let ok = svc
+        .upsert_rate(NewRate {
+            company_id: Some(company),
+            from_currency: from.clone(),
+            to_currency: to.clone(),
+            rate: dec("16000"),
+            effective_from: d(2026, 1, 1),
+            effective_to: None,
+            rate_type: RateType::Spot,
+            source: None,
+        })
+        .await;
+    assert!(
+        ok.is_ok(),
+        "a rate change (adjacent window) is the normal case"
+    );
 }
 
 // FIP-4 — bad rate input: a non-positive rate and a same-currency pair are rejected on write.
@@ -73,16 +126,38 @@ async fn fip4_bad_rate_input_rejected() {
     let pool = pool().await;
     let svc = FxService::new(pool.clone());
     let company = Uuid::new_v4();
-    let zero = svc.upsert_rate(NewRate {
-        company_id: Some(company), from_currency: "USD".into(), to_currency: "IDR".into(),
-        rate: dec("0"), effective_from: d(2026, 1, 1), effective_to: None,
-    }).await;
-    assert!(matches!(zero, Err(FxError::Invalid(_))), "a zero/negative rate is refused");
-    let same = svc.upsert_rate(NewRate {
-        company_id: Some(company), from_currency: "USD".into(), to_currency: "USD".into(),
-        rate: dec("1"), effective_from: d(2026, 1, 1), effective_to: None,
-    }).await;
-    assert!(matches!(same, Err(FxError::Invalid(_))), "a self-pair is refused");
+    let zero = svc
+        .upsert_rate(NewRate {
+            company_id: Some(company),
+            from_currency: "USD".into(),
+            to_currency: "IDR".into(),
+            rate: dec("0"),
+            effective_from: d(2026, 1, 1),
+            effective_to: None,
+            rate_type: RateType::Spot,
+            source: None,
+        })
+        .await;
+    assert!(
+        matches!(zero, Err(FxError::Invalid(_))),
+        "a zero/negative rate is refused"
+    );
+    let same = svc
+        .upsert_rate(NewRate {
+            company_id: Some(company),
+            from_currency: "USD".into(),
+            to_currency: "USD".into(),
+            rate: dec("1"),
+            effective_from: d(2026, 1, 1),
+            effective_to: None,
+            rate_type: RateType::Spot,
+            source: None,
+        })
+        .await;
+    assert!(
+        matches!(same, Err(FxError::Invalid(_))),
+        "a self-pair is refused"
+    );
 }
 
 // FIP-5 — MATURITY: the positivity invariant is enforced at the DB, not only in `upsert_rate`. A `rate=0`
@@ -102,7 +177,10 @@ async fn fip5_zero_rate_rejected_at_db() {
     )
     .bind(Uuid::new_v4()).bind(&from).bind(&to)
     .execute(&pool).await;
-    assert!(bad.is_err(), "a zero rate cannot be inserted through any writer — the CHECK backstops it");
+    assert!(
+        bad.is_err(),
+        "a zero rate cannot be inserted through any writer — the CHECK backstops it"
+    );
 
     let neg = sqlx::query(
         r#"INSERT INTO corporate.currency_exchanges (id, company_id, from_currency, to_currency, rate, effective_from)
@@ -110,7 +188,10 @@ async fn fip5_zero_rate_rejected_at_db() {
     )
     .bind(Uuid::new_v4()).bind(&from).bind(&to)
     .execute(&pool).await;
-    assert!(neg.is_err(), "a negative rate (receivable→payable flip) cannot be inserted");
+    assert!(
+        neg.is_err(),
+        "a negative rate (receivable→payable flip) cannot be inserted"
+    );
 }
 
 // FIP-6 — historical reproducibility under currency retirement: the quote currency's precision is
@@ -125,12 +206,23 @@ async fn fip6_soft_deleted_quote_currency_still_converts() {
     let svc = FxService::new(pool.clone());
     let company = Uuid::new_v4();
     svc.upsert_rate(NewRate {
-        company_id: Some(company), from_currency: from.clone(), to_currency: to.clone(),
-        rate: dec("100"), effective_from: d(2026, 1, 1), effective_to: None,
-    }).await.unwrap();
+        company_id: Some(company),
+        from_currency: from.clone(),
+        to_currency: to.clone(),
+        rate: dec("100"),
+        effective_from: d(2026, 1, 1),
+        effective_to: None,
+        rate_type: RateType::Spot,
+        source: None,
+    })
+    .await
+    .unwrap();
 
     // Before retirement: 12.34 * 100 = 1234, rounded to the quote's 0 dp.
-    let before = svc.convert(Some(company), dec("12.34"), &from, &to, d(2026, 6, 1)).await.unwrap();
+    let before = svc
+        .convert(Some(company), dec("12.34"), &from, &to, d(2026, 6, 1))
+        .await
+        .unwrap();
     assert_eq!(before.amount, dec("1234"));
 
     // Retire the quote currency (soft-delete via metadata). The historical conversion must still
@@ -143,7 +235,16 @@ async fn fip6_soft_deleted_quote_currency_still_converts() {
     .bind(&to)
     .execute(&pool).await.unwrap();
 
-    let after = svc.convert(Some(company), dec("12.34"), &from, &to, d(2026, 6, 1)).await;
-    assert!(after.is_ok(), "a retired quote currency must still convert (historical reproducibility)");
-    assert_eq!(after.unwrap().amount, dec("1234"), "the booked number reproduces after retirement");
+    let after = svc
+        .convert(Some(company), dec("12.34"), &from, &to, d(2026, 6, 1))
+        .await;
+    assert!(
+        after.is_ok(),
+        "a retired quote currency must still convert (historical reproducibility)"
+    );
+    assert_eq!(
+        after.unwrap().amount,
+        dec("1234"),
+        "the booked number reproduces after retirement"
+    );
 }

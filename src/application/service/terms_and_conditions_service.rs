@@ -7,9 +7,9 @@
 
 use backbone_core::GenericCrudService;
 
-use crate::presentation::dto::{CreateTermsAndConditionsDto, UpdateTermsAndConditionsDto};
 use crate::domain::entity::TermsAndConditions;
 use crate::infrastructure::persistence::TermsAndConditionsRepository;
+use crate::presentation::dto::{CreateTermsAndConditionsDto, UpdateTermsAndConditionsDto};
 
 /// Application service for TermsAndConditions entities.
 ///

@@ -40,10 +40,10 @@ models:
         attributes: ["@default(2)"]
         description: "Minor-unit precision (IDR uses 0, USD 2) — how the amount is rounded/displayed"
 
-      is_active:
-        type: bool
-        attributes: ["@default(true)"]
-        description: "Whether the currency may be used on new transactions"
+      status:
+        type: CurrencyStatus
+        attributes: ["@default(active)"]
+        description: "Lifecycle (inactive currencies are hidden from new documents, history keeps them)"
 
       metadata:
         type: Metadata
@@ -55,7 +55,7 @@ models:
         fields: [iso_code]
         where: "deleted_at IS NULL"
       - type: index
-        fields: [is_active]
+        fields: [status]
 
   - name: CurrencyExchange
     collection: currency_exchanges
@@ -96,6 +96,16 @@ models:
         type: date?
         description: "Rate effective to (inclusive); null = open-ended (the current rate)"
 
+      rate_type:
+        type: RateType
+        attributes: ["@default(spot)"]
+        description: "What the rate is: a point-in-time spot, a period average, or a period-end closing rate"
+
+      source:
+        type: string?
+        attributes: ["@max(60)"]
+        description: "Where the rate came from (e.g. 'manual', 'migrated_banking') — provenance for audit"
+
       metadata:
         type: Metadata
         attributes: ["@audit_metadata"]
@@ -107,3 +117,24 @@ models:
         fields: [from_currency, to_currency, effective_from]
       - type: index
         fields: [company_id]
+
+enums:
+  - name: CurrencyStatus
+    description: "Currency lifecycle"
+    variants:
+      - name: active
+        description: "Selectable on new documents"
+        default: true
+      - name: inactive
+        description: "Hidden from new documents; historical documents keep their booked amounts"
+
+  - name: RateType
+    description: "What an exchange-rate row represents"
+    variants:
+      - name: spot
+        description: "A point-in-time market rate (settlement/translation at a date)"
+        default: true
+      - name: avg_period
+        description: "An average over a period (monthly close conventions)"
+      - name: period_end
+        description: "The closing rate at a period end (revaluation conventions)"

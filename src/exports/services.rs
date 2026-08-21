@@ -5,80 +5,22 @@
 //! These services provide the public API for other modules.
 //! They only expose read operations - writes go through events.
 
-use anyhow::Result;
-use async_trait::async_trait;
-use uuid::Uuid;
-
-use super::types::*;
-
-// ============================================================================
-// QUERY SERVICE TRAIT
-// ============================================================================
-
-/// Public query service for Corporate module
-///
-/// This trait defines read-only operations that other modules can use.
-/// Implementations should NOT expose internal domain logic.
-#[async_trait]
-pub trait CorporateQueryService: Send + Sync {
-    /// Get Currency by ID
-    async fn get_currency(&self, id: CurrencyId) -> Result<Option<CurrencyDto>>;
-
-    /// Get Currency summary by ID
-    async fn get_currency_summary(&self, id: CurrencyId) -> Result<Option<CurrencySummary>>;
-
-    /// Check if Currency exists
-    async fn currency_exists(&self, id: CurrencyId) -> Result<bool>;
-
-    /// Get CurrencyExchange by ID
-    async fn get_currency_exchange(&self, id: CurrencyExchangeId) -> Result<Option<CurrencyExchangeDto>>;
-
-    /// Get CurrencyExchange summary by ID
-    async fn get_currency_exchange_summary(&self, id: CurrencyExchangeId) -> Result<Option<CurrencyExchangeSummary>>;
-
-    /// Check if CurrencyExchange exists
-    async fn currency_exchange_exists(&self, id: CurrencyExchangeId) -> Result<bool>;
-
-    /// Get Incoterm by ID
-    async fn get_incoterm(&self, id: IncotermId) -> Result<Option<IncotermDto>>;
-
-    /// Get Incoterm summary by ID
-    async fn get_incoterm_summary(&self, id: IncotermId) -> Result<Option<IncotermSummary>>;
-
-    /// Check if Incoterm exists
-    async fn incoterm_exists(&self, id: IncotermId) -> Result<bool>;
-
-    /// Get TermsAndConditions by ID
-    async fn get_terms_and_conditions(&self, id: TermsAndConditionsId) -> Result<Option<TermsAndConditionsDto>>;
-
-    /// Get TermsAndConditions summary by ID
-    async fn get_terms_and_conditions_summary(&self, id: TermsAndConditionsId) -> Result<Option<TermsAndConditionsSummary>>;
-
-    /// Check if TermsAndConditions exists
-    async fn terms_and_conditions_exists(&self, id: TermsAndConditionsId) -> Result<bool>;
-
-    /// Get Territory by ID
-    async fn get_territory(&self, id: TerritoryId) -> Result<Option<TerritoryDto>>;
-
-    /// Get Territory summary by ID
-    async fn get_territory_summary(&self, id: TerritoryId) -> Result<Option<TerritorySummary>>;
-
-    /// Check if Territory exists
-    async fn territory_exists(&self, id: TerritoryId) -> Result<bool>;
-
-}
-
 // ============================================================================
 // CUSTOM SERVICES
 // ============================================================================
 
 // <<< CUSTOM SERVICES START >>>
 // Add custom public services here
-use std::sync::Arc;
+use super::types::{Converted, RegisterRate, SpotRate};
+use crate::application::service::fx_service::NewRate;
+use crate::application::service::FxService;
+use crate::domain::entity::RateType;
+use anyhow::Result;
+use async_trait::async_trait;
 use chrono::NaiveDate;
 use rust_decimal::Decimal;
-use crate::application::service::FxService;
-use crate::application::service::fx_service::NewRate;
+use std::sync::Arc;
+use uuid::Uuid;
 
 /// The published FX contract. Sibling modules program against THIS trait — not
 /// `application::service::fx_service` — so the engine's internals are free to
@@ -98,6 +40,18 @@ pub trait CorporateFxPort: Send + Sync {
         to: &str,
         on_date: NaiveDate,
     ) -> Result<Converted>;
+
+    /// Read the spot rate in force for a directed pair at (or immediately
+    /// before) `on_or_before` — a raw rate read (no amount, no rounding, no
+    /// inverse fallback). Refuses when no window covers the date; a company
+    /// rate wins over a global one.
+    async fn spot_on_or_before(
+        &self,
+        company_id: Option<Uuid>,
+        from: &str,
+        to: &str,
+        on_or_before: NaiveDate,
+    ) -> Result<SpotRate>;
 
     /// Register a directed, effective-dated rate, rejecting a window that
     /// overlaps an existing one for the same pair + company scope. Returns the
@@ -127,7 +81,10 @@ impl CorporateFxPort for CorporateFxServiceImpl {
         to: &str,
         on_date: NaiveDate,
     ) -> Result<Converted> {
-        let c = self.inner.convert(company_id, amount, from, to, on_date).await?;
+        let c = self
+            .inner
+            .convert(company_id, amount, from, to, on_date)
+            .await?;
         Ok(Converted {
             amount: c.amount,
             rate: c.rate,
@@ -137,15 +94,38 @@ impl CorporateFxPort for CorporateFxServiceImpl {
         })
     }
 
+    async fn spot_on_or_before(
+        &self,
+        company_id: Option<Uuid>,
+        from: &str,
+        to: &str,
+        on_or_before: NaiveDate,
+    ) -> Result<SpotRate> {
+        let s = self
+            .inner
+            .spot_on_or_before(company_id, from, to, on_or_before)
+            .await?;
+        Ok(SpotRate {
+            rate: s.rate,
+            rate_id: s.rate_id,
+            effective_from: s.effective_from,
+        })
+    }
+
     async fn register_rate(&self, r: RegisterRate) -> Result<Uuid> {
-        self.inner.upsert_rate(NewRate {
-            company_id: r.company_id,
-            from_currency: r.from,
-            to_currency: r.to,
-            rate: r.rate,
-            effective_from: r.effective_from,
-            effective_to: r.effective_to,
-        }).await.map_err(Into::into)
+        self.inner
+            .upsert_rate(NewRate {
+                company_id: r.company_id,
+                from_currency: r.from,
+                to_currency: r.to,
+                rate: r.rate,
+                effective_from: r.effective_from,
+                effective_to: r.effective_to,
+                rate_type: r.rate_type.unwrap_or(RateType::Spot),
+                source: r.source,
+            })
+            .await
+            .map_err(Into::into)
     }
 }
 // <<< CUSTOM SERVICES END >>>

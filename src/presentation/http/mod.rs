@@ -5,8 +5,8 @@
 //! These handlers use Axum and backbone-core's BackboneCrudHandler
 //! to provide all 12 standard Backbone CRUD endpoints.
 
-pub mod currency_handler;
 pub mod currency_exchange_handler;
+pub mod currency_handler;
 pub mod incoterm_handler;
 pub mod terms_and_conditions_handler;
 pub mod territory_handler;
@@ -15,10 +15,22 @@ pub mod territory_handler;
 // END CUSTOM
 
 // Re-exports
-pub use currency_handler::{create_currency_routes, create_currency_read_routes, create_currency_write_routes};
-pub use currency_exchange_handler::{create_currency_exchange_routes, create_currency_exchange_read_routes, create_currency_exchange_write_routes};
-pub use incoterm_handler::{create_incoterm_routes, create_incoterm_read_routes, create_incoterm_write_routes};
-pub use terms_and_conditions_handler::{create_terms_and_conditions_routes, create_terms_and_conditions_read_routes, create_terms_and_conditions_write_routes};
-pub use territory_handler::{create_territory_routes, create_territory_read_routes, create_territory_write_routes};
+pub use currency_exchange_handler::{
+    create_currency_exchange_read_routes, create_currency_exchange_routes,
+    create_currency_exchange_write_routes,
+};
+pub use currency_handler::{
+    create_currency_read_routes, create_currency_routes, create_currency_write_routes,
+};
+pub use incoterm_handler::{
+    create_incoterm_read_routes, create_incoterm_routes, create_incoterm_write_routes,
+};
+pub use terms_and_conditions_handler::{
+    create_terms_and_conditions_read_routes, create_terms_and_conditions_routes,
+    create_terms_and_conditions_write_routes,
+};
+pub use territory_handler::{
+    create_territory_read_routes, create_territory_routes, create_territory_write_routes,
+};
 // <<< CUSTOM
 // END CUSTOM

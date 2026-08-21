@@ -23,9 +23,7 @@ pub struct TermsAndConditionsRepository(
 
 impl std::ops::Deref for TermsAndConditionsRepository {
     type Target = backbone_orm::GenericCrudRepository<TermsAndConditions, backbone_orm::SoftDelete>;
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
+    fn deref(&self) -> &Self::Target { &self.0 }
 }
 
 impl TermsAndConditionsRepository {
@@ -35,8 +33,4 @@ impl TermsAndConditionsRepository {
     }
 }
 
-backbone_core::impl_crud_repository!(
-    TermsAndConditionsRepository,
-    TermsAndConditions,
-    soft_delete
-);
+backbone_core::impl_crud_repository!(TermsAndConditionsRepository, TermsAndConditions, soft_delete);

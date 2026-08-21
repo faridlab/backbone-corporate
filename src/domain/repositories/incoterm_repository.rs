@@ -5,10 +5,10 @@
 //! This trait defines the repository contract for the Incoterm aggregate.
 //! Implementation is in the infrastructure layer.
 
-use anyhow::Result;
 use async_trait::async_trait;
+use anyhow::Result;
 
-use crate::domain::entity::Incoterm;
+use crate::domain::entity::{Incoterm, IncotermStatus};
 
 /// Pagination parameters for list queries
 #[derive(Debug, Clone, Default)]
@@ -45,13 +45,13 @@ pub struct IncotermPaginatedResult {
 pub struct IncotermFilter {
     pub code: Option<String>,
     pub name: Option<String>,
-    pub is_active: Option<bool>,
+    pub status: Option<IncotermStatus>,
 }
 
 impl IncotermFilter {
     /// Check if any filter is set
     pub fn has_filters(&self) -> bool {
-        self.code.is_some() || self.name.is_some() || self.is_active.is_some()
+        self.code.is_some() || self.name.is_some() || self.status.is_some()
     }
 }
 
@@ -61,6 +61,7 @@ impl IncotermFilter {
 /// Implementations should be in the infrastructure layer.
 #[async_trait]
 pub trait IncotermRepository: Send + Sync {
+
     // =========================================================================
     // Core CRUD Operations
     // =========================================================================
@@ -88,11 +89,7 @@ pub trait IncotermRepository: Send + Sync {
     async fn list(&self, params: IncotermPaginationParams) -> Result<IncotermPaginatedResult>;
 
     /// List incoterm with pagination and filters
-    async fn list_with_filters(
-        &self,
-        params: IncotermPaginationParams,
-        filters: IncotermFilter,
-    ) -> Result<IncotermPaginatedResult>;
+    async fn list_with_filters(&self, params: IncotermPaginationParams, filters: IncotermFilter) -> Result<IncotermPaginatedResult>;
 
     /// Count all incoterm entities
     async fn count(&self) -> Result<u64>;
@@ -114,10 +111,7 @@ pub trait IncotermRepository: Send + Sync {
     async fn restore(&self, id: &str) -> Result<Option<Incoterm>>;
 
     /// List soft-deleted incoterm entities
-    async fn list_deleted(
-        &self,
-        params: IncotermPaginationParams,
-    ) -> Result<IncotermPaginatedResult>;
+    async fn list_deleted(&self, params: IncotermPaginationParams) -> Result<IncotermPaginatedResult>;
 
     /// Empty trash (permanently delete all soft-deleted entities)
     async fn empty_trash(&self) -> Result<u64>;

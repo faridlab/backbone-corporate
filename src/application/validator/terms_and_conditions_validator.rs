@@ -5,9 +5,9 @@
 //! Returns an `EntityValidator<TermsAndConditions>` pre-loaded with schema-derived
 //! field rules. Extend in the `// <<< CUSTOM` zone.
 
+use backbone_core::{EntityValidator, ValidationErrors, ValidationError};
+use backbone_core::{RequiredString};
 use crate::domain::entity::TermsAndConditions;
-use backbone_core::RequiredString;
-use backbone_core::{EntityValidator, ValidationError, ValidationErrors};
 
 /// Validator type alias for TermsAndConditions entities.
 pub type TermsAndConditionsValidator = EntityValidator<TermsAndConditions>;
@@ -15,15 +15,9 @@ pub type TermsAndConditionsValidator = EntityValidator<TermsAndConditions>;
 /// Build a validator for TermsAndConditions with all schema-defined field rules.
 pub fn terms_and_conditions_validator() -> TermsAndConditionsValidator {
     EntityValidator::new()
-        .rule(RequiredString::new("code", |e: &TermsAndConditions| {
-            &e.code
-        }))
-        .rule(RequiredString::new("title", |e: &TermsAndConditions| {
-            &e.title
-        }))
-        .rule(RequiredString::new("body", |e: &TermsAndConditions| {
-            &e.body
-        }))
+        .rule(RequiredString::new("code", |e: &TermsAndConditions| &e.code))
+        .rule(RequiredString::new("title", |e: &TermsAndConditions| &e.title))
+        .rule(RequiredString::new("body", |e: &TermsAndConditions| &e.body))
     // <<< CUSTOM RULES
     // END CUSTOM RULES
 }

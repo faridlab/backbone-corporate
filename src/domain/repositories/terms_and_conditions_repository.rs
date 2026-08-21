@@ -5,10 +5,10 @@
 //! This trait defines the repository contract for the TermsAndConditions aggregate.
 //! Implementation is in the infrastructure layer.
 
-use anyhow::Result;
 use async_trait::async_trait;
+use anyhow::Result;
 
-use crate::domain::entity::TermsAndConditions;
+use crate::domain::entity::{TermsAndConditions, TermsAndConditionsStatus};
 
 /// Pagination parameters for list queries
 #[derive(Debug, Clone, Default)]
@@ -46,16 +46,13 @@ pub struct TermsAndConditionsFilter {
     pub code: Option<String>,
     pub title: Option<String>,
     pub body: Option<String>,
-    pub is_active: Option<bool>,
+    pub status: Option<TermsAndConditionsStatus>,
 }
 
 impl TermsAndConditionsFilter {
     /// Check if any filter is set
     pub fn has_filters(&self) -> bool {
-        self.code.is_some()
-            || self.title.is_some()
-            || self.body.is_some()
-            || self.is_active.is_some()
+        self.code.is_some() || self.title.is_some() || self.body.is_some() || self.status.is_some()
     }
 }
 
@@ -65,6 +62,7 @@ impl TermsAndConditionsFilter {
 /// Implementations should be in the infrastructure layer.
 #[async_trait]
 pub trait TermsAndConditionsRepository: Send + Sync {
+
     // =========================================================================
     // Core CRUD Operations
     // =========================================================================
@@ -79,11 +77,7 @@ pub trait TermsAndConditionsRepository: Send + Sync {
     async fn find_all(&self) -> Result<Vec<TermsAndConditions>>;
 
     /// Update terms_and_conditions by ID
-    async fn update(
-        &self,
-        id: &str,
-        entity: &TermsAndConditions,
-    ) -> Result<Option<TermsAndConditions>>;
+    async fn update(&self, id: &str, entity: &TermsAndConditions) -> Result<Option<TermsAndConditions>>;
 
     /// Delete terms_and_conditions by ID
     async fn delete(&self, id: &str) -> Result<bool>;
@@ -93,17 +87,10 @@ pub trait TermsAndConditionsRepository: Send + Sync {
     // =========================================================================
 
     /// List terms_and_conditions with pagination
-    async fn list(
-        &self,
-        params: TermsAndConditionsPaginationParams,
-    ) -> Result<TermsAndConditionsPaginatedResult>;
+    async fn list(&self, params: TermsAndConditionsPaginationParams) -> Result<TermsAndConditionsPaginatedResult>;
 
     /// List terms_and_conditions with pagination and filters
-    async fn list_with_filters(
-        &self,
-        params: TermsAndConditionsPaginationParams,
-        filters: TermsAndConditionsFilter,
-    ) -> Result<TermsAndConditionsPaginatedResult>;
+    async fn list_with_filters(&self, params: TermsAndConditionsPaginationParams, filters: TermsAndConditionsFilter) -> Result<TermsAndConditionsPaginatedResult>;
 
     /// Count all terms_and_conditions entities
     async fn count(&self) -> Result<u64>;
@@ -125,10 +112,7 @@ pub trait TermsAndConditionsRepository: Send + Sync {
     async fn restore(&self, id: &str) -> Result<Option<TermsAndConditions>>;
 
     /// List soft-deleted terms_and_conditions entities
-    async fn list_deleted(
-        &self,
-        params: TermsAndConditionsPaginationParams,
-    ) -> Result<TermsAndConditionsPaginatedResult>;
+    async fn list_deleted(&self, params: TermsAndConditionsPaginationParams) -> Result<TermsAndConditionsPaginatedResult>;
 
     /// Empty trash (permanently delete all soft-deleted entities)
     async fn empty_trash(&self) -> Result<u64>;

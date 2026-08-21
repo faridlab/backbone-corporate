@@ -5,9 +5,9 @@
 //! Returns an `EntityValidator<CurrencyExchange>` pre-loaded with schema-derived
 //! field rules. Extend in the `// <<< CUSTOM` zone.
 
-use crate::domain::entity::CurrencyExchange;
-use backbone_core::{EntityValidator, ValidationError, ValidationErrors};
+use backbone_core::{EntityValidator, ValidationErrors, ValidationError};
 use backbone_core::{NonNegative, OptionalNotBlank, RequiredString};
+use crate::domain::entity::CurrencyExchange;
 
 /// Validator type alias for CurrencyExchange entities.
 pub type CurrencyExchangeValidator = EntityValidator<CurrencyExchange>;
@@ -15,17 +15,9 @@ pub type CurrencyExchangeValidator = EntityValidator<CurrencyExchange>;
 /// Build a validator for CurrencyExchange with all schema-defined field rules.
 pub fn currency_exchange_validator() -> CurrencyExchangeValidator {
     EntityValidator::new()
-        .rule(RequiredString::new(
-            "from_currency",
-            |e: &CurrencyExchange| &e.from_currency,
-        ))
-        .rule(RequiredString::new(
-            "to_currency",
-            |e: &CurrencyExchange| &e.to_currency,
-        ))
-        .rule(OptionalNotBlank::new("source", |e: &CurrencyExchange| {
-            e.source.as_deref()
-        }))
+        .rule(RequiredString::new("from_currency", |e: &CurrencyExchange| &e.from_currency))
+        .rule(RequiredString::new("to_currency", |e: &CurrencyExchange| &e.to_currency))
+        .rule(OptionalNotBlank::new("source", |e: &CurrencyExchange| e.source.as_deref()))
     // <<< CUSTOM RULES
     // END CUSTOM RULES
 }

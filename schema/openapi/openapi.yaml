@@ -2162,7 +2162,7 @@ components:
         - id
         - code
         - name
-        - is_active
+        - status
         - metadata
       properties:
         id:
@@ -2174,8 +2174,8 @@ components:
         name:
           type: string
           maxLength: 120
-        is_active:
-          type: boolean
+        status:
+          type: string
         metadata:
           type: object
 
@@ -2197,7 +2197,7 @@ components:
       required:
         - code
         - name
-        - is_active
+        - status
         - metadata
       properties:
         code:
@@ -2206,8 +2206,8 @@ components:
         name:
           type: string
           maxLength: 120
-        is_active:
-          type: boolean
+        status:
+          type: string
         metadata:
           type: object
 
@@ -2216,7 +2216,7 @@ components:
       required:
         - code
         - name
-        - is_active
+        - status
         - metadata
       properties:
         code:
@@ -2225,8 +2225,8 @@ components:
         name:
           type: string
           maxLength: 120
-        is_active:
-          type: boolean
+        status:
+          type: string
         metadata:
           type: object
 
@@ -2239,8 +2239,8 @@ components:
         name:
           type: string
           maxLength: 120
-        is_active:
-          type: boolean
+        status:
+          type: string
         metadata:
           type: object
 
@@ -2261,7 +2261,7 @@ components:
         - code
         - title
         - body
-        - is_active
+        - status
         - metadata
       properties:
         id:
@@ -2276,8 +2276,8 @@ components:
         body:
           type: string
           maxLength: 8000
-        is_active:
-          type: boolean
+        status:
+          type: string
         metadata:
           type: object
 
@@ -2300,7 +2300,7 @@ components:
         - code
         - title
         - body
-        - is_active
+        - status
         - metadata
       properties:
         code:
@@ -2312,8 +2312,8 @@ components:
         body:
           type: string
           maxLength: 8000
-        is_active:
-          type: boolean
+        status:
+          type: string
         metadata:
           type: object
 
@@ -2323,7 +2323,7 @@ components:
         - code
         - title
         - body
-        - is_active
+        - status
         - metadata
       properties:
         code:
@@ -2335,8 +2335,8 @@ components:
         body:
           type: string
           maxLength: 8000
-        is_active:
-          type: boolean
+        status:
+          type: string
         metadata:
           type: object
 
@@ -2352,8 +2352,8 @@ components:
         body:
           type: string
           maxLength: 8000
-        is_active:
-          type: boolean
+        status:
+          type: string
         metadata:
           type: object
 

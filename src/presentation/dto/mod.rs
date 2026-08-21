@@ -13,24 +13,44 @@ pub mod territory_dto;
 
 // Re-exports
 pub use currency_dto::{
-    CreateCurrencyDto, CurrencyListResponseDto, CurrencyResponseDto, CurrencySummaryDto,
-    PatchCurrencyDto, UpdateCurrencyDto,
+    CreateCurrencyDto,
+    UpdateCurrencyDto,
+    PatchCurrencyDto,
+    CurrencyResponseDto,
+    CurrencyListResponseDto,
+    CurrencySummaryDto,
 };
 pub use currency_exchange_dto::{
-    CreateCurrencyExchangeDto, CurrencyExchangeListResponseDto, CurrencyExchangeResponseDto,
-    CurrencyExchangeSummaryDto, PatchCurrencyExchangeDto, UpdateCurrencyExchangeDto,
+    CreateCurrencyExchangeDto,
+    UpdateCurrencyExchangeDto,
+    PatchCurrencyExchangeDto,
+    CurrencyExchangeResponseDto,
+    CurrencyExchangeListResponseDto,
+    CurrencyExchangeSummaryDto,
 };
 pub use incoterm_dto::{
-    CreateIncotermDto, IncotermListResponseDto, IncotermResponseDto, IncotermSummaryDto,
-    PatchIncotermDto, UpdateIncotermDto,
+    CreateIncotermDto,
+    UpdateIncotermDto,
+    PatchIncotermDto,
+    IncotermResponseDto,
+    IncotermListResponseDto,
+    IncotermSummaryDto,
 };
 pub use terms_and_conditions_dto::{
-    CreateTermsAndConditionsDto, PatchTermsAndConditionsDto, TermsAndConditionsListResponseDto,
-    TermsAndConditionsResponseDto, TermsAndConditionsSummaryDto, UpdateTermsAndConditionsDto,
+    CreateTermsAndConditionsDto,
+    UpdateTermsAndConditionsDto,
+    PatchTermsAndConditionsDto,
+    TermsAndConditionsResponseDto,
+    TermsAndConditionsListResponseDto,
+    TermsAndConditionsSummaryDto,
 };
 pub use territory_dto::{
-    CreateTerritoryDto, PatchTerritoryDto, TerritoryListResponseDto, TerritoryResponseDto,
-    TerritorySummaryDto, UpdateTerritoryDto,
+    CreateTerritoryDto,
+    UpdateTerritoryDto,
+    PatchTerritoryDto,
+    TerritoryResponseDto,
+    TerritoryListResponseDto,
+    TerritorySummaryDto,
 };
 
 // Common pagination types
@@ -56,12 +76,8 @@ pub struct PaginationParams {
     pub sort_order: Option<String>,
 }
 
-fn default_page() -> u32 {
-    1
-}
-fn default_per_page() -> u32 {
-    20
-}
+fn default_page() -> u32 { 1 }
+fn default_per_page() -> u32 { 20 }
 
 /// API response wrapper
 #[derive(Debug, Clone, Serialize)]
@@ -86,11 +102,7 @@ pub struct ApiError {
 
 impl<T> ApiResponse<T> {
     pub fn ok(data: T) -> Self {
-        Self {
-            success: true,
-            data: Some(data),
-            error: None,
-        }
+        Self { success: true, data: Some(data), error: None }
     }
 
     pub fn err(code: impl Into<String>, message: impl Into<String>) -> Self {

@@ -5,10 +5,10 @@
 //! DTOs provide a clean separation between domain entities and API
 //! representations, with validation and OpenAPI documentation support.
 
-use chrono::{DateTime, NaiveDate, Utc};
-use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
+use chrono::{DateTime, Utc, NaiveDate};
+use rust_decimal::Decimal;
 
 #[cfg(feature = "openapi")]
 #[cfg(feature = "openapi")]
@@ -17,8 +17,8 @@ use utoipa::ToSchema;
 #[cfg(feature = "validation")]
 use validator::Validate;
 
-use crate::domain::entity::AuditMetadata;
 use crate::domain::entity::CurrencyExchange;
+use crate::domain::entity::AuditMetadata;
 use crate::domain::entity::RateType;
 
 // =============================================================================
@@ -48,11 +48,7 @@ pub struct CreateCurrencyExchangeDto {
     #[cfg_attr(feature = "openapi", schema(example = "2024-01-01"))]
     #[serde(alias = "effective_from")]
     pub effective_from: NaiveDate,
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        alias = "effective_to"
-    )]
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "effective_to")]
     pub effective_to: Option<NaiveDate>,
     #[serde(alias = "rate_type")]
     pub rate_type: RateType,
@@ -88,11 +84,7 @@ pub struct UpdateCurrencyExchangeDto {
     #[cfg_attr(feature = "openapi", schema(example = "2024-01-01"))]
     #[serde(alias = "effective_from")]
     pub effective_from: NaiveDate,
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        alias = "effective_to"
-    )]
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "effective_to")]
     pub effective_to: Option<NaiveDate>,
     #[serde(alias = "rate_type")]
     pub rate_type: RateType,
@@ -141,14 +133,7 @@ pub struct PatchCurrencyExchangeDto {
 impl PatchCurrencyExchangeDto {
     /// Check if any field is set
     pub fn has_changes(&self) -> bool {
-        self.company_id.is_some()
-            || self.from_currency.is_some()
-            || self.to_currency.is_some()
-            || self.rate.is_some()
-            || self.effective_from.is_some()
-            || self.effective_to.is_some()
-            || self.rate_type.is_some()
-            || self.source.is_some()
+        self.company_id.is_some() || self.from_currency.is_some() || self.to_currency.is_some() || self.rate.is_some() || self.effective_from.is_some() || self.effective_to.is_some() || self.rate_type.is_some() || self.source.is_some()
     }
 }
 
@@ -164,10 +149,7 @@ impl PatchCurrencyExchangeDto {
 #[cfg_attr(feature = "openapi", derive(ToSchema))]
 #[serde(rename_all = "camelCase")]
 pub struct CurrencyExchangeResponseDto {
-    #[cfg_attr(
-        feature = "openapi",
-        schema(example = "550e8400-e29b-41d4-a716-446655440000")
-    )]
+    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     pub id: Uuid,
     pub company_id: Option<Uuid>,
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
@@ -213,12 +195,7 @@ pub struct CurrencyExchangeListResponseDto {
 
 impl CurrencyExchangeListResponseDto {
     /// Create a new list response from items and pagination info
-    pub fn new(
-        items: Vec<CurrencyExchangeResponseDto>,
-        total: u64,
-        page: u32,
-        per_page: u32,
-    ) -> Self {
+    pub fn new(items: Vec<CurrencyExchangeResponseDto>, total: u64, page: u32, per_page: u32) -> Self {
         let total_pages = if per_page > 0 {
             ((total as f64) / (per_page as f64)).ceil() as u32
         } else {
@@ -323,10 +300,7 @@ impl backbone_core::FromCreateDto<CreateCurrencyExchangeDto> for CurrencyExchang
 }
 
 impl backbone_core::ApplyUpdateDto<UpdateCurrencyExchangeDto> for CurrencyExchange {
-    fn apply_update(
-        mut self,
-        dto: UpdateCurrencyExchangeDto,
-    ) -> backbone_core::ServiceResult<Self> {
+    fn apply_update(mut self, dto: UpdateCurrencyExchangeDto) -> backbone_core::ServiceResult<Self> {
         self.company_id = dto.company_id;
         self.from_currency = dto.from_currency;
         self.to_currency = dto.to_currency;

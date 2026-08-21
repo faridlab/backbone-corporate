@@ -27,7 +27,7 @@ impl TestDataGenerator for TermsAndConditionsTestData {
             "code": format!("TEST_{}", Uuid::new_v4().to_string().split('-').next().unwrap()),
             "title": format!("Test {}", Uuid::new_v4().to_string().split('-').next().unwrap()),
             "body": format!("Test {}", Uuid::new_v4().to_string().split('-').next().unwrap()),
-            "is_active": false,
+            "status": "active",
             "metadata": json!({}),
         })
     }
@@ -39,7 +39,7 @@ impl TestDataGenerator for TermsAndConditionsTestData {
             "code": format!("TEST_{}", Uuid::new_v4().to_string().split('-').next().unwrap()),
             "title": format!("Test {}", Uuid::new_v4().to_string().split('-').next().unwrap()),
             "body": format!("Test {}", Uuid::new_v4().to_string().split('-').next().unwrap()),
-            "is_active": false,
+            "status": "active",
             "metadata": json!({}),
         })
     }

@@ -1,8 +1,10 @@
-use super::AuditMetadata;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use uuid::Uuid;
+
+use super::TermsAndConditionsStatus;
+use super::AuditMetadata;
 
 /// Strongly-typed ID for TermsAndConditions
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -10,15 +12,9 @@ use uuid::Uuid;
 pub struct TermsAndConditionsId(pub Uuid);
 
 impl TermsAndConditionsId {
-    pub fn new(id: Uuid) -> Self {
-        Self(id)
-    }
-    pub fn generate() -> Self {
-        Self(Uuid::new_v4())
-    }
-    pub fn into_inner(self) -> Uuid {
-        self.0
-    }
+    pub fn new(id: Uuid) -> Self { Self(id) }
+    pub fn generate() -> Self { Self(Uuid::new_v4()) }
+    pub fn into_inner(self) -> Uuid { self.0 }
 }
 
 impl std::fmt::Display for TermsAndConditionsId {
@@ -35,28 +31,20 @@ impl std::str::FromStr for TermsAndConditionsId {
 }
 
 impl From<Uuid> for TermsAndConditionsId {
-    fn from(id: Uuid) -> Self {
-        Self(id)
-    }
+    fn from(id: Uuid) -> Self { Self(id) }
 }
 
 impl From<TermsAndConditionsId> for Uuid {
-    fn from(id: TermsAndConditionsId) -> Self {
-        id.0
-    }
+    fn from(id: TermsAndConditionsId) -> Self { id.0 }
 }
 
 impl AsRef<Uuid> for TermsAndConditionsId {
-    fn as_ref(&self) -> &Uuid {
-        &self.0
-    }
+    fn as_ref(&self) -> &Uuid { &self.0 }
 }
 
 impl std::ops::Deref for TermsAndConditionsId {
     type Target = Uuid;
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
+    fn deref(&self) -> &Self::Target { &self.0 }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
@@ -65,7 +53,7 @@ pub struct TermsAndConditions {
     pub code: String,
     pub title: String,
     pub body: String,
-    pub is_active: bool,
+    pub status: TermsAndConditionsStatus,
     #[serde(default)]
     #[sqlx(json)]
     pub metadata: AuditMetadata,
@@ -78,13 +66,13 @@ impl TermsAndConditions {
     }
 
     /// Create a new TermsAndConditions with required fields
-    pub fn new(code: String, title: String, body: String, is_active: bool) -> Self {
+    pub fn new(code: String, title: String, body: String, status: TermsAndConditionsStatus) -> Self {
         Self {
             id: Uuid::new_v4(),
             code,
             title,
             body,
-            is_active,
+            status,
             metadata: AuditMetadata::default(),
         }
     }
@@ -139,6 +127,12 @@ impl TermsAndConditions {
         self.metadata.deleted_by.as_ref()
     }
 
+    /// Get the current status
+    pub fn status(&self) -> &TermsAndConditionsStatus {
+        &self.status
+    }
+
+
     // ==========================================================
     // Partial Update
     // ==========================================================
@@ -148,24 +142,16 @@ impl TermsAndConditions {
         for (key, value) in fields {
             match key.as_str() {
                 "code" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.code = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.code = v; }
                 }
                 "title" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.title = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.title = v; }
                 }
                 "body" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.body = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.body = v; }
                 }
-                "is_active" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.is_active = v;
-                    }
+                "status" => {
+                    if let Ok(v) = serde_json::from_value(value) { self.status = v; }
                 }
                 _ => {} // ignore unknown fields
             }
@@ -221,6 +207,7 @@ impl backbone_orm::EntityRepoMeta for TermsAndConditions {
     fn column_types() -> std::collections::HashMap<String, String> {
         let mut m = std::collections::HashMap::new();
         m.insert("id".to_string(), "uuid".to_string());
+        m.insert("status".to_string(), "terms_and_conditions_status".to_string());
         m
     }
     fn search_fields() -> &'static [&'static str] {
@@ -237,7 +224,7 @@ pub struct TermsAndConditionsBuilder {
     code: Option<String>,
     title: Option<String>,
     body: Option<String>,
-    is_active: Option<bool>,
+    status: Option<TermsAndConditionsStatus>,
 }
 
 impl TermsAndConditionsBuilder {
@@ -259,9 +246,9 @@ impl TermsAndConditionsBuilder {
         self
     }
 
-    /// Set the is_active field (default: `true`)
-    pub fn is_active(mut self, value: bool) -> Self {
-        self.is_active = Some(value);
+    /// Set the status field (default: `TermsAndConditionsStatus::default()`)
+    pub fn status(mut self, value: TermsAndConditionsStatus) -> Self {
+        self.status = Some(value);
         self
     }
 
@@ -278,7 +265,7 @@ impl TermsAndConditionsBuilder {
             code,
             title,
             body,
-            is_active: self.is_active.unwrap_or(true),
+            status: self.status.unwrap_or_default(),
             metadata: AuditMetadata::default(),
         })
     }

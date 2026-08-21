@@ -7,8 +7,8 @@
 pub mod error;
 pub use error::{ServiceError, ServiceResult};
 
-pub mod currency_exchange_service;
 pub mod currency_service;
+pub mod currency_exchange_service;
 pub mod incoterm_service;
 pub mod terms_and_conditions_service;
 pub mod territory_service;
@@ -17,8 +17,8 @@ pub mod territory_service;
 pub mod fx_service;
 // END CUSTOM
 
-pub use currency_exchange_service::CurrencyExchangeService;
 pub use currency_service::CurrencyService;
+pub use currency_exchange_service::CurrencyExchangeService;
 pub use incoterm_service::IncotermService;
 pub use terms_and_conditions_service::TermsAndConditionsService;
 pub use territory_service::TerritoryService;

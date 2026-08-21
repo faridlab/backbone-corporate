@@ -7,9 +7,9 @@
 
 use backbone_core::GenericCrudService;
 
+use crate::presentation::dto::{CreateTerritoryDto, UpdateTerritoryDto};
 use crate::domain::entity::Territory;
 use crate::infrastructure::persistence::TerritoryRepository;
-use crate::presentation::dto::{CreateTerritoryDto, UpdateTerritoryDto};
 
 /// Application service for Territory entities.
 ///
@@ -25,8 +25,12 @@ use crate::presentation::dto::{CreateTerritoryDto, UpdateTerritoryDto};
 ///     // add domain-specific dependencies here
 /// }
 /// ```
-pub type TerritoryService =
-    GenericCrudService<Territory, CreateTerritoryDto, UpdateTerritoryDto, TerritoryRepository>;
+pub type TerritoryService = GenericCrudService<
+    Territory,
+    CreateTerritoryDto,
+    UpdateTerritoryDto,
+    TerritoryRepository,
+>;
 
 // <<< CUSTOM
 // END CUSTOM

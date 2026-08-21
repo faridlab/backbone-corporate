@@ -23,9 +23,7 @@ pub struct TerritoryRepository(
 
 impl std::ops::Deref for TerritoryRepository {
     type Target = backbone_orm::GenericCrudRepository<Territory, backbone_orm::SoftDelete>;
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
+    fn deref(&self) -> &Self::Target { &self.0 }
 }
 
 impl TerritoryRepository {

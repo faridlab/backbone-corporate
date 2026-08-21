@@ -26,7 +26,7 @@ impl TestDataGenerator for IncotermTestData {
             "id": Uuid::new_v4().to_string(),
             "code": format!("TEST_{}", Uuid::new_v4().to_string().split('-').next().unwrap()),
             "name": format!("Test {}", Uuid::new_v4().to_string().split('-').next().unwrap()),
-            "is_active": false,
+            "status": "active",
             "metadata": json!({}),
         })
     }
@@ -37,7 +37,7 @@ impl TestDataGenerator for IncotermTestData {
             "id": id,
             "code": format!("TEST_{}", Uuid::new_v4().to_string().split('-').next().unwrap()),
             "name": format!("Test {}", Uuid::new_v4().to_string().split('-').next().unwrap()),
-            "is_active": false,
+            "status": "active",
             "metadata": json!({}),
         })
     }

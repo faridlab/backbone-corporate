@@ -9,14 +9,14 @@ use anyhow::Result;
 use async_trait::async_trait;
 use sqlx::PgPool;
 
-mod currency_exchange_seeder;
 mod currency_seeder;
+mod currency_exchange_seeder;
 mod incoterm_seeder;
 mod terms_and_conditions_seeder;
 mod territory_seeder;
 
-pub use currency_exchange_seeder::SeedCurrencyExchangeSeeder;
 pub use currency_seeder::SeedCurrencySeeder;
+pub use currency_exchange_seeder::SeedCurrencyExchangeSeeder;
 pub use incoterm_seeder::SeedIncotermSeeder;
 pub use terms_and_conditions_seeder::SeedTermsAndConditionsSeeder;
 pub use territory_seeder::SeedTerritorySeeder;

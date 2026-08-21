@@ -28,10 +28,11 @@ models:
         attributes: ["@required", "@max(120)"]
         description: "Full term name"
 
-      is_active:
-        type: bool
-        attributes: ["@default(true)"]
-        description: "Whether the term may be selected on new documents"
+      # replaces is_active (boolean flipped to lifecycle enum)
+      status:
+        type: IncotermStatus
+        attributes: ["@default(active)"]
+        description: "Lifecycle (inactive terms are hidden from new documents; historical documents keep their delivery term)"
 
       metadata:
         type: Metadata
@@ -68,10 +69,11 @@ models:
         attributes: ["@required", "@max(8000)"]
         description: "The full T&C text (printed on quotes/orders/invoices)"
 
-      is_active:
-        type: bool
-        attributes: ["@default(true)"]
-        description: "Whether the block may be attached to new documents"
+      # replaces is_active (boolean flipped to lifecycle enum)
+      status:
+        type: TermsAndConditionsStatus
+        attributes: ["@default(active)"]
+        description: "Lifecycle (inactive blocks are hidden from new documents; issued documents keep their printed text)"
 
       metadata:
         type: Metadata
@@ -82,3 +84,22 @@ models:
       - type: unique
         fields: [code]
         where: "deleted_at IS NULL"
+
+enums:
+  - name: IncotermStatus
+    description: "Lifecycle of an Incoterm reference row"
+    variants:
+      - name: active
+        description: "Selectable on new documents"
+        default: true
+      - name: inactive
+        description: "Hidden from new documents; historical documents keep their delivery term"
+
+  - name: TermsAndConditionsStatus
+    description: "Lifecycle of a terms-and-conditions block"
+    variants:
+      - name: active
+        description: "May be attached to new documents"
+        default: true
+      - name: inactive
+        description: "Hidden from new documents; issued documents keep their printed text"

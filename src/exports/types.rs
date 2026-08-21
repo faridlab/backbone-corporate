@@ -5,11 +5,11 @@
 //! These DTOs are the ONLY types other modules should use.
 //! They are decoupled from internal domain entities.
 
-use crate::domain::entity::*;
-use chrono::{DateTime, NaiveDate, Utc};
-use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
+use chrono::{DateTime, Utc, NaiveDate};
+use rust_decimal::Decimal;
+use crate::domain::entity::*;
 
 // ============================================================================
 // CURRENCY TYPES
@@ -172,7 +172,7 @@ pub struct IncotermDto {
     pub id: IncotermId,
     pub code: String,
     pub name: String,
-    pub is_active: bool,
+    pub status: IncotermStatus,
     pub metadata: serde_json::Value,
 }
 
@@ -181,6 +181,7 @@ pub struct IncotermDto {
 pub struct IncotermSummary {
     pub id: IncotermId,
     pub name: String,
+    pub status: IncotermStatus,
 }
 
 /// Reference to Incoterm for foreign key relationships
@@ -230,7 +231,7 @@ pub struct TermsAndConditionsDto {
     pub code: String,
     pub title: String,
     pub body: String,
-    pub is_active: bool,
+    pub status: TermsAndConditionsStatus,
     pub metadata: serde_json::Value,
 }
 
@@ -239,6 +240,7 @@ pub struct TermsAndConditionsDto {
 pub struct TermsAndConditionsSummary {
     pub id: TermsAndConditionsId,
     pub title: String,
+    pub status: TermsAndConditionsStatus,
 }
 
 /// Reference to TermsAndConditions for foreign key relationships

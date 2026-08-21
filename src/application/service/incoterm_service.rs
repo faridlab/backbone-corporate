@@ -7,9 +7,9 @@
 
 use backbone_core::GenericCrudService;
 
+use crate::presentation::dto::{CreateIncotermDto, UpdateIncotermDto};
 use crate::domain::entity::Incoterm;
 use crate::infrastructure::persistence::IncotermRepository;
-use crate::presentation::dto::{CreateIncotermDto, UpdateIncotermDto};
 
 /// Application service for Incoterm entities.
 ///
@@ -25,8 +25,12 @@ use crate::presentation::dto::{CreateIncotermDto, UpdateIncotermDto};
 ///     // add domain-specific dependencies here
 /// }
 /// ```
-pub type IncotermService =
-    GenericCrudService<Incoterm, CreateIncotermDto, UpdateIncotermDto, IncotermRepository>;
+pub type IncotermService = GenericCrudService<
+    Incoterm,
+    CreateIncotermDto,
+    UpdateIncotermDto,
+    IncotermRepository,
+>;
 
 // <<< CUSTOM
 // END CUSTOM

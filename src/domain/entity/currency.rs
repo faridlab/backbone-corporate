@@ -3,8 +3,8 @@ use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use uuid::Uuid;
 
-use super::AuditMetadata;
 use super::CurrencyStatus;
+use super::AuditMetadata;
 
 /// Strongly-typed ID for Currency
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -12,15 +12,9 @@ use super::CurrencyStatus;
 pub struct CurrencyId(pub Uuid);
 
 impl CurrencyId {
-    pub fn new(id: Uuid) -> Self {
-        Self(id)
-    }
-    pub fn generate() -> Self {
-        Self(Uuid::new_v4())
-    }
-    pub fn into_inner(self) -> Uuid {
-        self.0
-    }
+    pub fn new(id: Uuid) -> Self { Self(id) }
+    pub fn generate() -> Self { Self(Uuid::new_v4()) }
+    pub fn into_inner(self) -> Uuid { self.0 }
 }
 
 impl std::fmt::Display for CurrencyId {
@@ -37,28 +31,20 @@ impl std::str::FromStr for CurrencyId {
 }
 
 impl From<Uuid> for CurrencyId {
-    fn from(id: Uuid) -> Self {
-        Self(id)
-    }
+    fn from(id: Uuid) -> Self { Self(id) }
 }
 
 impl From<CurrencyId> for Uuid {
-    fn from(id: CurrencyId) -> Self {
-        id.0
-    }
+    fn from(id: CurrencyId) -> Self { id.0 }
 }
 
 impl AsRef<Uuid> for CurrencyId {
-    fn as_ref(&self) -> &Uuid {
-        &self.0
-    }
+    fn as_ref(&self) -> &Uuid { &self.0 }
 }
 
 impl std::ops::Deref for CurrencyId {
     type Target = Uuid;
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
+    fn deref(&self) -> &Self::Target { &self.0 }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
@@ -81,12 +67,7 @@ impl Currency {
     }
 
     /// Create a new Currency with required fields
-    pub fn new(
-        iso_code: String,
-        name: String,
-        decimal_places: i32,
-        status: CurrencyStatus,
-    ) -> Self {
+    pub fn new(iso_code: String, name: String, decimal_places: i32, status: CurrencyStatus) -> Self {
         Self {
             id: Uuid::new_v4(),
             iso_code,
@@ -153,6 +134,7 @@ impl Currency {
         &self.status
     }
 
+
     // ==========================================================
     // Fluent Setters (with_* for optional fields)
     // ==========================================================
@@ -172,29 +154,19 @@ impl Currency {
         for (key, value) in fields {
             match key.as_str() {
                 "iso_code" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.iso_code = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.iso_code = v; }
                 }
                 "name" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.name = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.name = v; }
                 }
                 "symbol" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.symbol = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.symbol = v; }
                 }
                 "decimal_places" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.decimal_places = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.decimal_places = v; }
                 }
                 "status" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.status = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.status = v; }
                 }
                 _ => {} // ignore unknown fields
             }
@@ -306,9 +278,7 @@ impl CurrencyBuilder {
     ///
     /// Returns Err if any required field without a default is missing.
     pub fn build(self) -> Result<Currency, String> {
-        let iso_code = self
-            .iso_code
-            .ok_or_else(|| "iso_code is required".to_string())?;
+        let iso_code = self.iso_code.ok_or_else(|| "iso_code is required".to_string())?;
         let name = self.name.ok_or_else(|| "name is required".to_string())?;
 
         Ok(Currency {

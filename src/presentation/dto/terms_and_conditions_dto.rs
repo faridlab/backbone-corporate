@@ -5,9 +5,9 @@
 //! DTOs provide a clean separation between domain entities and API
 //! representations, with validation and OpenAPI documentation support.
 
-use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
+use chrono::{DateTime, Utc};
 
 #[cfg(feature = "openapi")]
 #[cfg(feature = "openapi")]
@@ -16,8 +16,9 @@ use utoipa::ToSchema;
 #[cfg(feature = "validation")]
 use validator::Validate;
 
-use crate::domain::entity::AuditMetadata;
 use crate::domain::entity::TermsAndConditions;
+use crate::domain::entity::AuditMetadata;
+use crate::domain::entity::TermsAndConditionsStatus;
 
 // =============================================================================
 // Create DTO
@@ -41,9 +42,7 @@ pub struct CreateTermsAndConditionsDto {
     #[cfg_attr(feature = "validation", validate(length(max = 8000)))]
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     pub body: String,
-    #[cfg_attr(feature = "openapi", schema(example = true))]
-    #[serde(alias = "is_active")]
-    pub is_active: bool,
+    pub status: TermsAndConditionsStatus,
 }
 
 // =============================================================================
@@ -68,9 +67,7 @@ pub struct UpdateTermsAndConditionsDto {
     #[cfg_attr(feature = "validation", validate(length(max = 8000)))]
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     pub body: String,
-    #[cfg_attr(feature = "openapi", schema(example = true))]
-    #[serde(alias = "is_active")]
-    pub is_active: bool,
+    pub status: TermsAndConditionsStatus,
 }
 
 // =============================================================================
@@ -98,18 +95,14 @@ pub struct PatchTermsAndConditionsDto {
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub body: Option<String>,
-    #[cfg_attr(feature = "openapi", schema(example = true))]
-    #[serde(skip_serializing_if = "Option::is_none", alias = "is_active")]
-    pub is_active: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub status: Option<TermsAndConditionsStatus>,
 }
 
 impl PatchTermsAndConditionsDto {
     /// Check if any field is set
     pub fn has_changes(&self) -> bool {
-        self.code.is_some()
-            || self.title.is_some()
-            || self.body.is_some()
-            || self.is_active.is_some()
+        self.code.is_some() || self.title.is_some() || self.body.is_some() || self.status.is_some()
     }
 }
 
@@ -125,10 +118,7 @@ impl PatchTermsAndConditionsDto {
 #[cfg_attr(feature = "openapi", derive(ToSchema))]
 #[serde(rename_all = "camelCase")]
 pub struct TermsAndConditionsResponseDto {
-    #[cfg_attr(
-        feature = "openapi",
-        schema(example = "550e8400-e29b-41d4-a716-446655440000")
-    )]
+    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     pub id: Uuid,
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     pub code: String,
@@ -136,8 +126,7 @@ pub struct TermsAndConditionsResponseDto {
     pub title: String,
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     pub body: String,
-    #[cfg_attr(feature = "openapi", schema(example = true))]
-    pub is_active: bool,
+    pub status: TermsAndConditionsStatus,
     pub metadata: AuditMetadata,
 }
 
@@ -171,12 +160,7 @@ pub struct TermsAndConditionsListResponseDto {
 
 impl TermsAndConditionsListResponseDto {
     /// Create a new list response from items and pagination info
-    pub fn new(
-        items: Vec<TermsAndConditionsResponseDto>,
-        total: u64,
-        page: u32,
-        per_page: u32,
-    ) -> Self {
+    pub fn new(items: Vec<TermsAndConditionsResponseDto>, total: u64, page: u32, per_page: u32) -> Self {
         let total_pages = if per_page > 0 {
             ((total as f64) / (per_page as f64)).ceil() as u32
         } else {
@@ -217,7 +201,7 @@ impl From<TermsAndConditions> for TermsAndConditionsResponseDto {
             code: entity.code,
             title: entity.title,
             body: entity.body,
-            is_active: entity.is_active,
+            status: entity.status,
             metadata: entity.metadata,
         }
     }
@@ -243,7 +227,7 @@ impl From<CreateTermsAndConditionsDto> for TermsAndConditions {
             code: dto.code,
             title: dto.title,
             body: dto.body,
-            is_active: dto.is_active,
+            status: dto.status,
             metadata: AuditMetadata::default(),
         }
     }
@@ -256,7 +240,7 @@ impl From<&TermsAndConditions> for TermsAndConditionsResponseDto {
             code: entity.code.clone(),
             title: entity.title.clone(),
             body: entity.body.clone(),
-            is_active: entity.is_active.clone(),
+            status: entity.status.clone(),
             metadata: entity.metadata.clone(),
         }
     }
@@ -269,14 +253,11 @@ impl backbone_core::FromCreateDto<CreateTermsAndConditionsDto> for TermsAndCondi
 }
 
 impl backbone_core::ApplyUpdateDto<UpdateTermsAndConditionsDto> for TermsAndConditions {
-    fn apply_update(
-        mut self,
-        dto: UpdateTermsAndConditionsDto,
-    ) -> backbone_core::ServiceResult<Self> {
+    fn apply_update(mut self, dto: UpdateTermsAndConditionsDto) -> backbone_core::ServiceResult<Self> {
         self.code = dto.code;
         self.title = dto.title;
         self.body = dto.body;
-        self.is_active = dto.is_active;
+        self.status = dto.status;
         Ok(self)
     }
 }

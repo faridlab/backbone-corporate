@@ -1,9 +1,9 @@
 //! The FX seam against the REAL backbone-accounting ledger. Corporate is the multi-currency prerequisite:
 //! it holds the effective-dated rate; a consumer converts a foreign amount and books it in the functional
-//! currency (IDR). This test plays that consumer — convert a USD supplier bill through corporate's real FX
-//! engine, then post the resulting IDR amount as a BALANCED journal in the REAL ledger. Proves the number
-//! corporate produces lands, balanced, in accounting. ZERO normal Cargo edge — accounting is a dev-dep only;
-//! corporate never posts GL.
+//! currency. This test plays that consumer — convert a foreign supplier bill through corporate's real FX
+//! engine, then post the resulting functional-currency amount as a BALANCED journal in the REAL ledger.
+//! Proves the number corporate produces lands, balanced, in accounting. ZERO normal Cargo edge — accounting
+//! is a dev-dep only; corporate never posts GL.
 
 mod common;
 use common::*;
@@ -54,18 +54,17 @@ async fn balance(pool: &sqlx::PgPool, acct: Uuid) -> Decimal {
         .bind(acct).fetch_one(pool).await.expect("balance")
 }
 
-// FXSEAM-1 — a USD 100 supplier bill, converted at the effective rate (16,250), posts a balanced IDR
+// FXSEAM-1 — a foreign 100-unit supplier bill, converted at the effective rate (16,250), posts a balanced
 // journal (Dr Expense 1,625,000 · Cr A/P 1,625,000) accepted by the REAL ledger.
 #[tokio::test]
 async fn fxseam1_converted_foreign_bill_posts_balanced() {
     let pool = pool().await;
-    seed_std_currencies(&pool).await;
+    let (from, to) = fx_pair(&pool, 0).await;
     let company = Uuid::new_v4();
     let fx = FxService::new(pool.clone());
     fx.upsert_rate(NewRate {
-        company_id: Some(company),
-        from_currency: "USD".into(),
-        to_currency: "IDR".into(),
+        from_currency: from.clone(),
+        to_currency: to.clone(),
         rate: dec("16250"),
         effective_from: d(2026, 1, 1),
         effective_to: None,
@@ -77,13 +76,13 @@ async fn fxseam1_converted_foreign_bill_posts_balanced() {
 
     // The consumer converts the foreign amount through corporate's real FX engine.
     let converted = fx
-        .convert(Some(company), dec("100"), "USD", "IDR", d(2026, 6, 1))
+        .convert(dec("100"), &from, &to, d(2026, 6, 1))
         .await
         .unwrap();
     assert_eq!(
         converted.amount,
         dec("1625000"),
-        "USD 100 @ 16,250 = IDR 1,625,000"
+        "foreign 100 @ 16,250 = functional 1,625,000"
     );
 
     // …and books it in the REAL ledger, in the functional currency, balanced.
@@ -107,7 +106,7 @@ async fn fxseam1_converted_foreign_bill_posts_balanced() {
     .await;
     let svc = PostingService::new(Arc::new(SqlxPostingRepository::new(pool.clone())));
     let mut req = PostingRequest::original(company, "manual", Uuid::new_v4(), d(2026, 6, 1));
-    req.source_reference = Some(format!("USD bill @ {}", converted.rate));
+    req.source_reference = Some(format!("foreign bill @ {}", converted.rate));
     req.lines = vec![
         PostingLine {
             account_id: expense,

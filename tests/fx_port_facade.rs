@@ -10,25 +10,22 @@ use backbone_corporate::exports::CorporateFxPort;
 use backbone_corporate::exports::RegisterRate;
 use backbone_corporate::CorporateModule;
 use std::sync::Arc;
-use uuid::Uuid;
 
 // FXPORT-1 — the published port round-trips: register a rate via the port, then convert via the
 // port, getting back the contract `Converted` (amount + stamped rate). No application internals.
 #[tokio::test]
 async fn fxport1_port_facade_round_trips() {
     let pool = pool().await;
-    seed_std_currencies(&pool).await;
+    let (from, to) = fx_pair(&pool, 0).await;
     let module = CorporateModule::builder()
         .with_database(pool.clone())
         .build()
         .expect("build module");
     let port: Arc<dyn CorporateFxPort> = module.fx_port();
-    let company = Uuid::new_v4();
 
     port.register_rate(RegisterRate {
-        company_id: Some(company),
-        from: "USD".into(),
-        to: "IDR".into(),
+        from: from.clone(),
+        to: to.clone(),
         rate: dec("16250"),
         effective_from: d(2026, 1, 1),
         effective_to: None,
@@ -39,13 +36,13 @@ async fn fxport1_port_facade_round_trips() {
     .expect("register rate via port");
 
     let c = port
-        .convert(Some(company), dec("100"), "USD", "IDR", d(2026, 6, 1))
+        .convert(dec("100"), &from, &to, d(2026, 6, 1))
         .await
         .expect("convert via port");
     assert_eq!(
         c.amount,
         dec("1625000"),
-        "USD 100 @ 16,250 = IDR 1,625,000 (0 dp)"
+        "base 100 @ 16,250 = quote 1,625,000 (0 dp)"
     );
     assert_eq!(c.rate, dec("16250"));
     assert!(
@@ -54,7 +51,7 @@ async fn fxport1_port_facade_round_trips() {
     );
     assert!(
         !c.inverse,
-        "a direct USD->IDR row is not an inverse conversion"
+        "a direct base->quote row is not an inverse conversion"
     );
 }
 
@@ -64,7 +61,8 @@ async fn fxport1_port_facade_round_trips() {
 #[tokio::test]
 async fn fxport2_missing_rate_is_an_error_via_port() {
     let pool = pool().await;
-    seed_std_currencies(&pool).await;
+    // A fresh pair with NO registered window: nothing covers the date.
+    let (from, to) = fx_pair(&pool, 0).await;
     let module = CorporateModule::builder()
         .with_database(pool.clone())
         .build()
@@ -72,13 +70,7 @@ async fn fxport2_missing_rate_is_an_error_via_port() {
 
     let r = module
         .fx_port()
-        .convert(
-            Some(Uuid::new_v4()),
-            dec("100"),
-            "USD",
-            "IDR",
-            d(2020, 1, 1),
-        )
+        .convert(dec("100"), &from, &to, d(2020, 1, 1))
         .await;
     assert!(
         r.is_err(),

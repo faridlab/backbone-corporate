@@ -6,24 +6,16 @@ use common::*;
 
 use backbone_corporate::application::service::fx_service::*;
 use backbone_corporate::domain::entity::RateType;
-use uuid::Uuid;
 
 // FIP-1 — no rate for the pair/date → NoRate, NOT a silent 1:1 or a zero. A consumer must not book a
 // foreign amount at a guessed rate.
 #[tokio::test]
 async fn fip1_missing_rate_is_a_hard_signal() {
     let pool = pool().await;
-    seed_std_currencies(&pool).await;
+    // A fresh pair with NO registered window: nothing covers the date.
+    let (from, to) = fx_pair(&pool, 0).await;
     let svc = FxService::new(pool.clone());
-    let r = svc
-        .convert(
-            Some(Uuid::new_v4()),
-            dec("100"),
-            "USD",
-            "IDR",
-            d(2020, 1, 1),
-        )
-        .await;
+    let r = svc.convert(dec("100"), &from, &to, d(2020, 1, 1)).await;
     assert!(
         matches!(r, Err(FxError::NoRate { .. })),
         "no rate must be an error, not a guess"
@@ -37,13 +29,10 @@ async fn fip1_missing_rate_is_a_hard_signal() {
 #[tokio::test]
 async fn fip2_overlapping_windows_refused() {
     let pool = pool().await;
-    let from = fake_currency(&pool, 2).await;
-    let to = fake_currency(&pool, 0).await;
+    let (from, to) = fx_pair(&pool, 0).await;
     let svc = FxService::new(pool.clone());
-    let company = Uuid::new_v4();
 
     svc.upsert_rate(NewRate {
-        company_id: Some(company),
         from_currency: from.clone(),
         to_currency: to.clone(),
         rate: dec("15000"),
@@ -58,7 +47,6 @@ async fn fip2_overlapping_windows_refused() {
     // A second window that OVERLAPS the first (2026-06 is inside both) — must be refused.
     let clash = svc
         .upsert_rate(NewRate {
-            company_id: Some(company),
             from_currency: from.clone(),
             to_currency: to.clone(),
             rate: dec("16000"),
@@ -75,7 +63,7 @@ async fn fip2_overlapping_windows_refused() {
 
     // The one surviving window still resolves deterministically.
     let out = svc
-        .convert(Some(company), dec("1"), &from, &to, d(2026, 6, 15))
+        .convert(dec("1"), &from, &to, d(2026, 6, 15))
         .await
         .unwrap();
     assert_eq!(out.rate, dec("15000"));
@@ -86,12 +74,9 @@ async fn fip2_overlapping_windows_refused() {
 #[tokio::test]
 async fn fip3_adjacent_windows_allowed() {
     let pool = pool().await;
-    let from = fake_currency(&pool, 2).await;
-    let to = fake_currency(&pool, 0).await;
+    let (from, to) = fx_pair(&pool, 0).await;
     let svc = FxService::new(pool.clone());
-    let company = Uuid::new_v4();
     svc.upsert_rate(NewRate {
-        company_id: Some(company),
         from_currency: from.clone(),
         to_currency: to.clone(),
         rate: dec("15000"),
@@ -104,7 +89,6 @@ async fn fip3_adjacent_windows_allowed() {
     .unwrap();
     let ok = svc
         .upsert_rate(NewRate {
-            company_id: Some(company),
             from_currency: from.clone(),
             to_currency: to.clone(),
             rate: dec("16000"),
@@ -124,11 +108,10 @@ async fn fip3_adjacent_windows_allowed() {
 #[tokio::test]
 async fn fip4_bad_rate_input_rejected() {
     let pool = pool().await;
+    seed_std_currencies(&pool).await;
     let svc = FxService::new(pool.clone());
-    let company = Uuid::new_v4();
     let zero = svc
         .upsert_rate(NewRate {
-            company_id: Some(company),
             from_currency: "USD".into(),
             to_currency: "IDR".into(),
             rate: dec("0"),
@@ -144,7 +127,6 @@ async fn fip4_bad_rate_input_rejected() {
     );
     let same = svc
         .upsert_rate(NewRate {
-            company_id: Some(company),
             from_currency: "USD".into(),
             to_currency: "USD".into(),
             rate: dec("1"),
@@ -167,15 +149,14 @@ async fn fip4_bad_rate_input_rejected() {
 #[tokio::test]
 async fn fip5_zero_rate_rejected_at_db() {
     let pool = pool().await;
-    let from = fake_currency(&pool, 2).await;
-    let to = fake_currency(&pool, 0).await;
+    let (from, to) = fx_pair(&pool, 0).await;
     // A raw INSERT — the same trust boundary the CRUD create/upsert/bulk endpoints sit on (they never call
     // `upsert_rate`). The DB CHECK must reject a non-positive rate here.
     let bad = sqlx::query(
-        r#"INSERT INTO corporate.currency_exchanges (id, company_id, from_currency, to_currency, rate, effective_from)
-           VALUES (gen_random_uuid(), $1, $2, $3, 0, DATE '2026-01-01')"#,
+        r#"INSERT INTO corporate.currency_exchanges (id, from_currency, to_currency, rate, effective_from)
+           VALUES (gen_random_uuid(), $1, $2, 0, DATE '2026-01-01')"#,
     )
-    .bind(Uuid::new_v4()).bind(&from).bind(&to)
+    .bind(&from).bind(&to)
     .execute(&pool).await;
     assert!(
         bad.is_err(),
@@ -183,10 +164,10 @@ async fn fip5_zero_rate_rejected_at_db() {
     );
 
     let neg = sqlx::query(
-        r#"INSERT INTO corporate.currency_exchanges (id, company_id, from_currency, to_currency, rate, effective_from)
-           VALUES (gen_random_uuid(), $1, $2, $3, -16250, DATE '2026-01-01')"#,
+        r#"INSERT INTO corporate.currency_exchanges (id, from_currency, to_currency, rate, effective_from)
+           VALUES (gen_random_uuid(), $1, $2, -16250, DATE '2026-01-01')"#,
     )
-    .bind(Uuid::new_v4()).bind(&from).bind(&to)
+    .bind(&from).bind(&to)
     .execute(&pool).await;
     assert!(
         neg.is_err(),
@@ -201,12 +182,9 @@ async fn fip5_zero_rate_rejected_at_db() {
 #[tokio::test]
 async fn fip6_soft_deleted_quote_currency_still_converts() {
     let pool = pool().await;
-    let from = fake_currency(&pool, 2).await;
-    let to = fake_currency(&pool, 0).await; // 0-dp quote currency
+    let (from, to) = fx_pair(&pool, 0).await; // 0-dp quote currency
     let svc = FxService::new(pool.clone());
-    let company = Uuid::new_v4();
     svc.upsert_rate(NewRate {
-        company_id: Some(company),
         from_currency: from.clone(),
         to_currency: to.clone(),
         rate: dec("100"),
@@ -220,7 +198,7 @@ async fn fip6_soft_deleted_quote_currency_still_converts() {
 
     // Before retirement: 12.34 * 100 = 1234, rounded to the quote's 0 dp.
     let before = svc
-        .convert(Some(company), dec("12.34"), &from, &to, d(2026, 6, 1))
+        .convert(dec("12.34"), &from, &to, d(2026, 6, 1))
         .await
         .unwrap();
     assert_eq!(before.amount, dec("1234"));
@@ -235,9 +213,7 @@ async fn fip6_soft_deleted_quote_currency_still_converts() {
     .bind(&to)
     .execute(&pool).await.unwrap();
 
-    let after = svc
-        .convert(Some(company), dec("12.34"), &from, &to, d(2026, 6, 1))
-        .await;
+    let after = svc.convert(dec("12.34"), &from, &to, d(2026, 6, 1)).await;
     assert!(
         after.is_ok(),
         "a retired quote currency must still convert (historical reproducibility)"

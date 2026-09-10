@@ -1,9 +1,9 @@
 //! Shared test helpers: a live pool, currency seeding, and per-test isolation for the shared rate table.
 //!
-//! The `currency_exchanges` EXCLUDE constraint spans the WHOLE table, so parallel tests must not write
-//! overlapping windows for the same (pair, company) scope. Isolation strategy: every test uses a unique
-//! `company_id` and scopes its rates to it (distinct company scopes never collide); tests that exercise a
-//! GLOBAL (null-company) rate use a fresh fake currency pair so their null-company window is unique too.
+//! Rates are global reference data — one table-wide window per directed pair, enforced by the
+//! table-level EXCLUDE constraint. Isolation strategy: every test mints a FRESH fake currency
+//! pair (`fx_pair`) so its windows can never collide with another test's, in this binary or any
+//! other running in parallel.
 
 #![allow(dead_code)]
 
@@ -55,8 +55,17 @@ pub async fn currency(pool: &PgPool, iso: &str, name: &str, decimal_places: i32)
     iso.to_string()
 }
 
-/// A fresh fake currency (unique 3-char code, given precision) so a global-rate test's window is unique.
+/// A fresh fake currency (unique 3-char code, given precision) so a test's windows are unique.
 pub async fn fake_currency(pool: &PgPool, decimal_places: i32) -> String {
     let code = Uuid::new_v4().simple().to_string()[..3].to_uppercase();
     currency(pool, &code, "Fake", decimal_places).await
+}
+
+/// A fresh directed currency pair unique to the calling test: (base, quote). The base gets
+/// 2 minor units (a USD-like convention), the quote `quote_dp` — pass 0 for a whole-unit
+/// quote (an IDR-like convention) to exercise rounding to the minor unit.
+pub async fn fx_pair(pool: &PgPool, quote_dp: i32) -> (String, String) {
+    let from = fake_currency(pool, 2).await;
+    let to = fake_currency(pool, quote_dp).await;
+    (from, to)
 }

@@ -7,7 +7,6 @@
 
 use async_trait::async_trait;
 use anyhow::Result;
-use uuid::Uuid;
 
 use crate::domain::entity::{CurrencyExchange, RateType};
 
@@ -44,7 +43,6 @@ pub struct CurrencyExchangePaginatedResult {
 /// Filter parameters for list queries
 #[derive(Debug, Clone, Default)]
 pub struct CurrencyExchangeFilter {
-    pub company_id: Option<Uuid>,
     pub from_currency: Option<String>,
     pub to_currency: Option<String>,
     pub rate_type: Option<RateType>,
@@ -54,7 +52,7 @@ pub struct CurrencyExchangeFilter {
 impl CurrencyExchangeFilter {
     /// Check if any filter is set
     pub fn has_filters(&self) -> bool {
-        self.company_id.is_some() || self.from_currency.is_some() || self.to_currency.is_some() || self.rate_type.is_some() || self.source.is_some()
+        self.from_currency.is_some() || self.to_currency.is_some() || self.rate_type.is_some() || self.source.is_some()
     }
 }
 

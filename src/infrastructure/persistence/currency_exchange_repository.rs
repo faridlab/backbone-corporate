@@ -40,20 +40,9 @@ impl CurrencyExchangeRepository {
     }
 }
 
-/// Bind `company` onto `conn` transaction-local via `set_config('app.company_id', ..., true)` — the
-/// `true` scopes the setting to the surrounding transaction, so it is discarded on commit/rollback and
-/// cannot leak onto a pooled connection reused by the next request.
-///
-/// (ADR-0008 follow-up done: the service now calls the framework's
-/// `backbone_orm::company_scope::bind_company_on` directly. corporate's local copy was byte-identical
-/// to the framework helper — same `SELECT set_config('app.company_id', $1, true)` — so this thin
-/// wrapper was removed to keep one source of truth. The `set_config` SQL itself still lives in the
-/// framework's persistence layer, not corporate's service, so the 4-layer rule holds.)
-
 /// The exact row an FX-rate insert writes.
 pub struct NewCurrencyExchangeRow {
     pub id: Uuid,
-    pub company_id: Option<Uuid>,
     pub from_currency: String,
     pub to_currency: String,
     pub rate: Decimal,
@@ -65,36 +54,33 @@ pub struct NewCurrencyExchangeRow {
 
 /// FX rate SQL. Lives here (not in the service) per the module's 4-layer rule.
 impl CurrencyExchangeRepository {
-    /// Overlap check within one company scope: two windows [a1,b1] and [a2,b2] overlap iff
-    /// a1 <= b2 AND a2 <= b1, a null end treated as +infinity. Runs on the caller's scoped tx.
+    /// Overlap check for one directed pair: two windows [a1,b1] and [a2,b2] overlap iff
+    /// a1 <= b2 AND a2 <= b1, a null end treated as +infinity. Runs on the caller's tx.
     pub async fn find_overlap_tx(
         &self,
         conn: &mut PgConnection,
         from: &str,
         to: &str,
-        company_id: Option<Uuid>,
         effective_from: NaiveDate,
         effective_to: Option<NaiveDate>,
     ) -> Result<Option<Uuid>, sqlx::Error> {
         sqlx::query_scalar(
             r#"SELECT id FROM corporate.currency_exchanges
                WHERE from_currency=$1 AND to_currency=$2
-                 AND company_id IS NOT DISTINCT FROM $3
                  AND (metadata->>'deleted_at') IS NULL
-                 AND effective_from <= COALESCE($5, DATE '9999-12-31')
-                 AND $4 <= COALESCE(effective_to, DATE '9999-12-31')
+                 AND effective_from <= COALESCE($4, DATE '9999-12-31')
+                 AND $3 <= COALESCE(effective_to, DATE '9999-12-31')
                LIMIT 1"#,
         )
         .bind(from)
         .bind(to)
-        .bind(company_id)
         .bind(effective_from)
         .bind(effective_to)
         .fetch_optional(conn)
         .await
     }
 
-    /// Insert a rate row on the caller's scoped tx.
+    /// Insert a rate row on the caller's tx.
     pub async fn insert_rate_tx(
         &self,
         conn: &mut PgConnection,
@@ -102,12 +88,11 @@ impl CurrencyExchangeRepository {
     ) -> Result<(), sqlx::Error> {
         sqlx::query(
             r#"INSERT INTO corporate.currency_exchanges
-                 (id, company_id, from_currency, to_currency, rate, effective_from, effective_to,
+                 (id, from_currency, to_currency, rate, effective_from, effective_to,
                   rate_type, source)
-               VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)"#,
+               VALUES ($1,$2,$3,$4,$5,$6,$7,$8)"#,
         )
         .bind(r.id)
-        .bind(r.company_id)
         .bind(&r.from_currency)
         .bind(&r.to_currency)
         .bind(r.rate)
@@ -121,10 +106,8 @@ impl CurrencyExchangeRepository {
     }
 
     /// The rate in force for a directed pair on a date (+ its row id and effective_from), or None.
-    /// Company scope wins over global; among a scope the most recent window wins (overlap is
-    /// prevented on write). Runs on the caller's tx, which already carries `app.company_id` when
-    /// scoped; the SQL predicate keeps the company-wins-over-global ordering explicit as
-    /// defense-in-depth.
+    /// The table holds one shared rate per pair; the most recent covering window wins (overlap is
+    /// prevented on write). Runs on the caller's tx.
     ///
     /// "In force on the date" IS the latest-on-or-before read on a gapless chain: among windows
     /// that started on or before the date, only the latest one still covers it (its predecessor
@@ -141,12 +124,10 @@ impl CurrencyExchangeRepository {
         let row = sqlx::query(
             r#"SELECT id, rate, effective_from FROM corporate.currency_exchanges
                WHERE from_currency=$1 AND to_currency=$2
-                 AND (company_id IS NOT DISTINCT FROM NULLIF(current_setting('app.company_id', true), '')::uuid
-                      OR company_id IS NULL)
                  AND (metadata->>'deleted_at') IS NULL
                  AND effective_from <= $3
                  AND (effective_to IS NULL OR effective_to >= $3)
-               ORDER BY (company_id IS NOT NULL) DESC, effective_from DESC
+               ORDER BY effective_from DESC
                LIMIT 1"#,
         )
         .bind(from).bind(to).bind(on_date)

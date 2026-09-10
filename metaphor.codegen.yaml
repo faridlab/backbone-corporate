@@ -17,6 +17,11 @@ user_owned:
   # the generator own this file.
   - "migrations/20260819100000_company_fence_strict.up.sql"
   - "migrations/20260819100000_company_fence_strict.down.sql"
+  # The tenancy strip (ADR-0029): drops the company_id column, its index, the isolation
+  # policy, and rebuilds the no-overlap EXCLUDE without the company element. Hand-authored
+  # with its own ordering and data-conflict guards — never regenerated.
+  - "migrations/20260910103000_strip_tenancy.up.sql"
+  - "migrations/20260910103000_strip_tenancy.down.sql"
   # The hand-authored FX conversion engine (effective-dated rate lookup + no-overlap guard).
   - "src/application/service/fx_service.rs"
   # User-owned repositories holding the FX engine's hand-written SQL (overlap check, rate insert,

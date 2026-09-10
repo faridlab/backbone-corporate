@@ -34,8 +34,6 @@ use crate::domain::entity::RateType;
 #[cfg_attr(feature = "validation", derive(Validate))]
 #[serde(rename_all = "camelCase")]
 pub struct CreateCurrencyExchangeDto {
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "company_id")]
-    pub company_id: Option<Uuid>,
     #[cfg_attr(feature = "validation", validate(length(max = 3)))]
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     #[serde(alias = "from_currency")]
@@ -70,8 +68,6 @@ pub struct CreateCurrencyExchangeDto {
 #[cfg_attr(feature = "validation", derive(Validate))]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateCurrencyExchangeDto {
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "company_id")]
-    pub company_id: Option<Uuid>,
     #[cfg_attr(feature = "validation", validate(length(max = 3)))]
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     #[serde(alias = "from_currency")]
@@ -106,8 +102,6 @@ pub struct UpdateCurrencyExchangeDto {
 #[cfg_attr(feature = "validation", derive(Validate))]
 #[serde(rename_all = "camelCase")]
 pub struct PatchCurrencyExchangeDto {
-    #[serde(skip_serializing_if = "Option::is_none", alias = "company_id")]
-    pub company_id: Option<Uuid>,
     #[cfg_attr(feature = "validation", validate(length(max = 3)))]
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "from_currency")]
@@ -133,7 +127,7 @@ pub struct PatchCurrencyExchangeDto {
 impl PatchCurrencyExchangeDto {
     /// Check if any field is set
     pub fn has_changes(&self) -> bool {
-        self.company_id.is_some() || self.from_currency.is_some() || self.to_currency.is_some() || self.rate.is_some() || self.effective_from.is_some() || self.effective_to.is_some() || self.rate_type.is_some() || self.source.is_some()
+        self.from_currency.is_some() || self.to_currency.is_some() || self.rate.is_some() || self.effective_from.is_some() || self.effective_to.is_some() || self.rate_type.is_some() || self.source.is_some()
     }
 }
 
@@ -151,7 +145,6 @@ impl PatchCurrencyExchangeDto {
 pub struct CurrencyExchangeResponseDto {
     #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     pub id: Uuid,
-    pub company_id: Option<Uuid>,
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     pub from_currency: String,
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
@@ -219,9 +212,9 @@ impl CurrencyExchangeListResponseDto {
 #[serde(rename_all = "camelCase")]
 pub struct CurrencyExchangeSummaryDto {
     pub id: Uuid,
-    pub company_id: Option<Uuid>,
     pub from_currency: String,
     pub to_currency: String,
+    pub rate: Decimal,
     pub created_at: Option<DateTime<Utc>>,
 }
 
@@ -233,7 +226,6 @@ impl From<CurrencyExchange> for CurrencyExchangeResponseDto {
     fn from(entity: CurrencyExchange) -> Self {
         Self {
             id: entity.id,
-            company_id: entity.company_id,
             from_currency: entity.from_currency,
             to_currency: entity.to_currency,
             rate: entity.rate,
@@ -251,9 +243,9 @@ impl From<CurrencyExchange> for CurrencyExchangeSummaryDto {
         let created_at = backbone_core::PersistentEntity::created_at(&entity);
         Self {
             id: entity.id,
-            company_id: entity.company_id,
             from_currency: entity.from_currency,
             to_currency: entity.to_currency,
+            rate: entity.rate,
             created_at,
         }
     }
@@ -263,7 +255,6 @@ impl From<CreateCurrencyExchangeDto> for CurrencyExchange {
     fn from(dto: CreateCurrencyExchangeDto) -> Self {
         Self {
             id: Uuid::new_v4(),
-            company_id: dto.company_id,
             from_currency: dto.from_currency,
             to_currency: dto.to_currency,
             rate: dto.rate,
@@ -280,7 +271,6 @@ impl From<&CurrencyExchange> for CurrencyExchangeResponseDto {
     fn from(entity: &CurrencyExchange) -> Self {
         Self {
             id: entity.id.clone(),
-            company_id: entity.company_id.clone(),
             from_currency: entity.from_currency.clone(),
             to_currency: entity.to_currency.clone(),
             rate: entity.rate.clone(),
@@ -301,7 +291,6 @@ impl backbone_core::FromCreateDto<CreateCurrencyExchangeDto> for CurrencyExchang
 
 impl backbone_core::ApplyUpdateDto<UpdateCurrencyExchangeDto> for CurrencyExchange {
     fn apply_update(mut self, dto: UpdateCurrencyExchangeDto) -> backbone_core::ServiceResult<Self> {
-        self.company_id = dto.company_id;
         self.from_currency = dto.from_currency;
         self.to_currency = dto.to_currency;
         self.rate = dto.rate;

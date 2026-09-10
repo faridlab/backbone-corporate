@@ -1,25 +1,22 @@
 //! Golden cases — the FX-engine oracle: an amount converts at the rate effective on the transaction date,
 //! rounded to the quote currency; a same-currency conversion is the identity; effective-dating reproduces
-//! history; a company rate overrides a global one; the rate used is returned for stamping.
+//! history; the rate used is returned for stamping.
 
 mod common;
 use common::*;
 
 use backbone_corporate::application::service::fx_service::*;
 use backbone_corporate::domain::entity::RateType;
-use uuid::Uuid;
 
-// FGC-1 — convert USD→IDR at the effective rate, rounded to IDR's 0 minor units.
+// FGC-1 — convert base→quote at the effective rate, rounded to the quote currency's 0 minor units.
 #[tokio::test]
 async fn fgc1_convert_rounds_to_quote_currency() {
     let pool = pool().await;
-    seed_std_currencies(&pool).await;
+    let (from, to) = fx_pair(&pool, 0).await;
     let svc = FxService::new(pool.clone());
-    let company = Uuid::new_v4();
     svc.upsert_rate(NewRate {
-        company_id: Some(company),
-        from_currency: "USD".into(),
-        to_currency: "IDR".into(),
+        from_currency: from.clone(),
+        to_currency: to.clone(),
         rate: dec("16250.5"),
         effective_from: d(2026, 1, 1),
         effective_to: None,
@@ -29,15 +26,15 @@ async fn fgc1_convert_rounds_to_quote_currency() {
     .await
     .unwrap();
 
-    // 12.34 USD × 16250.5 = 200,531.17 → IDR rounds to 0 dp → 200,531.
+    // 12.34 base × 16250.5 = 200,531.17 → 0-dp quote rounds to 200,531.
     let out = svc
-        .convert(Some(company), dec("12.34"), "USD", "IDR", d(2026, 3, 1))
+        .convert(dec("12.34"), &from, &to, d(2026, 3, 1))
         .await
         .unwrap();
     assert_eq!(
         out.amount,
         dec("200531"),
-        "rounded to IDR's 0 decimal places"
+        "rounded to the quote's 0 decimal places"
     );
     assert_eq!(out.rate, dec("16250.5"));
     assert!(out.rate_id.is_some());
@@ -50,7 +47,7 @@ async fn fgc2_same_currency_is_identity() {
     seed_std_currencies(&pool).await;
     let svc = FxService::new(pool.clone());
     let out = svc
-        .convert(None, dec("999.99"), "IDR", "IDR", d(2026, 3, 1))
+        .convert(dec("999.99"), "IDR", "IDR", d(2026, 3, 1))
         .await
         .unwrap();
     assert_eq!(out.amount, dec("999.99"));
@@ -63,13 +60,11 @@ async fn fgc2_same_currency_is_identity() {
 #[tokio::test]
 async fn fgc3_effective_dating_reproduces_history() {
     let pool = pool().await;
-    seed_std_currencies(&pool).await;
+    let (from, to) = fx_pair(&pool, 0).await;
     let svc = FxService::new(pool.clone());
-    let company = Uuid::new_v4();
     svc.upsert_rate(NewRate {
-        company_id: Some(company),
-        from_currency: "USD".into(),
-        to_currency: "IDR".into(),
+        from_currency: from.clone(),
+        to_currency: to.clone(),
         rate: dec("15000"),
         effective_from: d(2025, 1, 1),
         effective_to: Some(d(2025, 12, 31)),
@@ -79,9 +74,8 @@ async fn fgc3_effective_dating_reproduces_history() {
     .await
     .unwrap();
     svc.upsert_rate(NewRate {
-        company_id: Some(company),
-        from_currency: "USD".into(),
-        to_currency: "IDR".into(),
+        from_currency: from.clone(),
+        to_currency: to.clone(),
         rate: dec("16250"),
         effective_from: d(2026, 1, 1),
         effective_to: None,
@@ -92,11 +86,11 @@ async fn fgc3_effective_dating_reproduces_history() {
     .unwrap();
 
     let old = svc
-        .convert(Some(company), dec("100"), "USD", "IDR", d(2025, 6, 1))
+        .convert(dec("100"), &from, &to, d(2025, 6, 1))
         .await
         .unwrap();
     let new = svc
-        .convert(Some(company), dec("100"), "USD", "IDR", d(2026, 6, 1))
+        .convert(dec("100"), &from, &to, d(2026, 6, 1))
         .await
         .unwrap();
     assert_eq!(
@@ -111,70 +105,17 @@ async fn fgc3_effective_dating_reproduces_history() {
     );
 }
 
-// FGC-4 — a company-scoped rate overrides a global (null-company) rate for the same pair + date.
-#[tokio::test]
-async fn fgc4_company_rate_overrides_global() {
-    let pool = pool().await;
-    let from = fake_currency(&pool, 2).await; // fresh pair so the global window is unique across tests
-    let to = fake_currency(&pool, 0).await;
-    let svc = FxService::new(pool.clone());
-    let company = Uuid::new_v4();
-    // Global rate for everyone…
-    svc.upsert_rate(NewRate {
-        company_id: None,
-        from_currency: from.clone(),
-        to_currency: to.clone(),
-        rate: dec("100"),
-        effective_from: d(2026, 1, 1),
-        effective_to: None,
-        rate_type: RateType::Spot,
-        source: None,
-    })
-    .await
-    .unwrap();
-    // …and a negotiated company rate for the same pair/date.
-    svc.upsert_rate(NewRate {
-        company_id: Some(company),
-        from_currency: from.clone(),
-        to_currency: to.clone(),
-        rate: dec("110"),
-        effective_from: d(2026, 1, 1),
-        effective_to: None,
-        rate_type: RateType::Spot,
-        source: None,
-    })
-    .await
-    .unwrap();
-
-    let mine = svc
-        .convert(Some(company), dec("10"), &from, &to, d(2026, 6, 1))
-        .await
-        .unwrap();
-    let anyone = svc
-        .convert(Some(Uuid::new_v4()), dec("10"), &from, &to, d(2026, 6, 1))
-        .await
-        .unwrap();
-    assert_eq!(mine.rate, dec("110"), "my negotiated rate wins");
-    assert_eq!(
-        anyone.rate,
-        dec("100"),
-        "another company falls back to the global rate"
-    );
-}
-
-// FGC-5 — the conversion returns the rate + rate row it used, so the consumer can STAMP it on the
+// FGC-4 — the conversion returns the rate + rate row it used, so the consumer can STAMP it on the
 // transaction (the audit/revaluation record a foreign-currency document owes). Completeness council.
 #[tokio::test]
-async fn fgc5_convert_returns_rate_for_stamping() {
+async fn fgc4_convert_returns_rate_for_stamping() {
     let pool = pool().await;
-    seed_std_currencies(&pool).await;
+    let (from, to) = fx_pair(&pool, 0).await;
     let svc = FxService::new(pool.clone());
-    let company = Uuid::new_v4();
     let rate_id = svc
         .upsert_rate(NewRate {
-            company_id: Some(company),
-            from_currency: "USD".into(),
-            to_currency: "IDR".into(),
+            from_currency: from.clone(),
+            to_currency: to.clone(),
             rate: dec("16000"),
             effective_from: d(2026, 1, 1),
             effective_to: None,
@@ -185,7 +126,7 @@ async fn fgc5_convert_returns_rate_for_stamping() {
         .unwrap();
 
     let out = svc
-        .convert(Some(company), dec("50"), "USD", "IDR", d(2026, 6, 1))
+        .convert(dec("50"), &from, &to, d(2026, 6, 1))
         .await
         .unwrap();
     assert_eq!(out.amount, dec("800000"));
@@ -198,21 +139,19 @@ async fn fgc5_convert_returns_rate_for_stamping() {
     assert_eq!(out.rate_date, d(2026, 6, 1));
 }
 
-// FGC-6 — inverse round-trip (completeness council): a foreign-currency REFUND must un-book the exact
-// stamped rate. Only USD→IDR is registered; converting the IDR amount back to USD reciprocates the SAME
+// FGC-5 — inverse round-trip (completeness council): a foreign-currency REFUND must un-book the exact
+// stamped rate. Only base→quote is registered; converting the quote amount back reciprocates the SAME
 // forward row (same rate_id) and nets to the minor unit — so backbone-payment's `reverse_payment` on a
-// foreign receipt lands 1000.00 USD, not a drifted 999.xx from a hand-typed inverse row.
+// foreign receipt lands 1000.00 base, not a drifted 999.xx from a hand-typed inverse row.
 #[tokio::test]
-async fn fgc6_inverse_reciprocates_the_stamped_row() {
+async fn fgc5_inverse_reciprocates_the_stamped_row() {
     let pool = pool().await;
-    seed_std_currencies(&pool).await;
+    let (from, to) = fx_pair(&pool, 0).await;
     let svc = FxService::new(pool.clone());
-    let company = Uuid::new_v4();
     let fwd_id = svc
         .upsert_rate(NewRate {
-            company_id: Some(company),
-            from_currency: "USD".into(),
-            to_currency: "IDR".into(),
+            from_currency: from.clone(),
+            to_currency: to.clone(),
             rate: dec("16250"),
             effective_from: d(2026, 1, 1),
             effective_to: None,
@@ -222,18 +161,18 @@ async fn fgc6_inverse_reciprocates_the_stamped_row() {
         .await
         .unwrap();
 
-    // The original receipt: 1000 USD → 16,250,000 IDR (the number booked + stamped).
+    // The original receipt: 1000 base → 16,250,000 quote (the number booked + stamped).
     let fwd = svc
-        .convert(Some(company), dec("1000"), "USD", "IDR", d(2026, 6, 1))
+        .convert(dec("1000"), &from, &to, d(2026, 6, 1))
         .await
         .unwrap();
     assert_eq!(fwd.amount, dec("16250000"));
     assert!(!fwd.inverse);
 
-    // The refund: convert the IDR amount back to USD — no direct IDR→USD row exists; the reciprocal of the
-    // SAME forward row is used, so it round-trips exactly and carries the forward row's id.
+    // The refund: convert the quote amount back to base — no direct quote→base row exists; the reciprocal
+    // of the SAME forward row is used, so it round-trips exactly and carries the forward row's id.
     let back = svc
-        .convert(Some(company), dec("16250000"), "IDR", "USD", d(2026, 6, 1))
+        .convert(dec("16250000"), &to, &from, d(2026, 6, 1))
         .await
         .unwrap();
     assert_eq!(
@@ -252,18 +191,16 @@ async fn fgc6_inverse_reciprocates_the_stamped_row() {
     );
 }
 
-// FGC-7 — overflow safety: an amount near rust_decimal's 28-digit ceiling, times a large rate,
+// FGC-6 — overflow safety: an amount near rust_decimal's 28-digit ceiling, times a large rate,
 // overflows the envelope. This must surface as FxError::Overflow, NOT a panic from naive `*`.
 #[tokio::test]
-async fn fgc7_overflow_is_an_error_not_a_panic() {
+async fn fgc6_overflow_is_an_error_not_a_panic() {
     let pool = pool().await;
-    seed_std_currencies(&pool).await;
+    let (from, to) = fx_pair(&pool, 0).await;
     let svc = FxService::new(pool.clone());
-    let company = Uuid::new_v4();
     svc.upsert_rate(NewRate {
-        company_id: Some(company),
-        from_currency: "USD".into(),
-        to_currency: "IDR".into(),
+        from_currency: from.clone(),
+        to_currency: to.clone(),
         rate: dec("16250"),
         effective_from: d(2026, 1, 1),
         effective_to: None,
@@ -275,9 +212,7 @@ async fn fgc7_overflow_is_an_error_not_a_panic() {
 
     // 28 nines (~1e28, under Decimal::MAX so it parses) x 16,250 overflows the 28-digit envelope.
     let huge = dec("9999999999999999999999999999");
-    let r = svc
-        .convert(Some(company), huge, "USD", "IDR", d(2026, 6, 1))
-        .await;
+    let r = svc.convert(huge, &from, &to, d(2026, 6, 1)).await;
     assert!(
         matches!(r, Err(FxError::Overflow)),
         "overflow must be a typed error, got {:?}",

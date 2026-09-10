@@ -12,15 +12,14 @@
 module: corporate
 version: 2
 schema: corporate
+# Tenancy: none, by design (ADR-0029). The module is tenant-agnostic and reusable —
+# it ships no scoping column and no fence declaration. Every entity here is global
+# reference data (currencies, FX rates, territories, incoterms, terms and conditions);
+# the former company-scoped rate lane on currency_exchanges was removed with its
+# company_id column. A composing backend-service that wants these tables org-scoped
+# declares them in its tenancy.yaml; the decorator installs org_unit_id, the RLS
+# policy, the kind guard, and per-unit uniques at composition time.
 description: "Corporate reference masters: Currency + CurrencyExchange (effective-dated FX), Territory, Incoterm, TermsAndConditions"
-
-# ADR-0014 company fence: currency_exchanges is company-scoped and fenced strict.
-# The other masters (currencies, incoterms, territories, terms_and_conditions) are
-# global reference data with no company_id — implicitly excluded. Note: the live
-# currency_exchanges policy is a deliberate split (reads admit global NULL-company
-# fallback rates; writes stay own-only) — see the ADR-0008 follow-up migration; a
-# future regen must preserve that shape.
-company_fence: strict
 
 config:
   database: postgresql

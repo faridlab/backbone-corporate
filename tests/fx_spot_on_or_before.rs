@@ -6,11 +6,9 @@
 //!   that STARTED latest at-or-before the date — banking parity, and the shape a migration copies.
 //! - FXS-2: a date before the first window refuses (NoRate) — nothing to fall back to.
 //! - FXS-3: a GAP refuses rather than resurrecting a deliberately closed window's rate.
-//! - FXS-4: a company row wins over a global row for a scoped caller; a platform (None) caller
-//!   sees the global row.
-//! - FXS-5: it is a RAW read — no reciprocal fallback, no rounding, no quote-precision contact.
-//! - FXS-6: rate_type + source stamping on registration (defaults + explicit provenance).
-//! - FXS-7: the published port carries the same read as the contract `SpotRate`.
+//! - FXS-4: it is a RAW read — no reciprocal fallback, no rounding, no quote-precision contact.
+//! - FXS-5: rate_type + source stamping on registration (defaults + explicit provenance).
+//! - FXS-6: the published port carries the same read as the contract `SpotRate`.
 //!
 //! Requires DATABASE_URL (:5433/backbone_corporate with corporate migrated).
 
@@ -19,7 +17,6 @@ use common::*;
 
 use backbone_corporate::application::service::fx_service::*;
 use backbone_corporate::domain::entity::RateType;
-use uuid::Uuid;
 
 /// FXS-1 — a gapless chain: A [Jan 1, Jun 30], B [Jul 1, Dec 31], C [Jan 1 2027, ∞). Every probe
 /// date returns the row that started latest at-or-before it — including both window boundaries,
@@ -27,14 +24,13 @@ use uuid::Uuid;
 #[tokio::test]
 async fn fxs1_gapless_chain_reads_the_latest_row_at_or_before() {
     let pool = pool().await;
-    let company = Uuid::new_v4();
+    let (from, to) = fx_pair(&pool, 0).await;
     let svc = FxService::new(pool.clone());
 
     let a = svc
         .upsert_rate(NewRate {
-            company_id: Some(company),
-            from_currency: "USD".into(),
-            to_currency: "IDR".into(),
+            from_currency: from.clone(),
+            to_currency: to.clone(),
             rate: dec("15000"),
             effective_from: d(2026, 1, 1),
             effective_to: Some(d(2026, 6, 30)),
@@ -45,9 +41,8 @@ async fn fxs1_gapless_chain_reads_the_latest_row_at_or_before() {
         .unwrap();
     let b = svc
         .upsert_rate(NewRate {
-            company_id: Some(company),
-            from_currency: "USD".into(),
-            to_currency: "IDR".into(),
+            from_currency: from.clone(),
+            to_currency: to.clone(),
             rate: dec("16000"),
             effective_from: d(2026, 7, 1),
             effective_to: Some(d(2026, 12, 31)),
@@ -58,9 +53,8 @@ async fn fxs1_gapless_chain_reads_the_latest_row_at_or_before() {
         .unwrap();
     let c = svc
         .upsert_rate(NewRate {
-            company_id: Some(company),
-            from_currency: "USD".into(),
-            to_currency: "IDR".into(),
+            from_currency: from.clone(),
+            to_currency: to.clone(),
             rate: dec("16250"),
             effective_from: d(2027, 1, 1),
             effective_to: None,
@@ -81,7 +75,7 @@ async fn fxs1_gapless_chain_reads_the_latest_row_at_or_before() {
         (d(2028, 5, 20), c, "16250", d(2027, 1, 1)), // deep into the open window
     ] {
         let s = svc
-            .spot_on_or_before(Some(company), "USD", "IDR", on)
+            .spot_on_or_before(&from, &to, on)
             .await
             .unwrap();
         assert_eq!(
@@ -100,12 +94,11 @@ async fn fxs1_gapless_chain_reads_the_latest_row_at_or_before() {
 #[tokio::test]
 async fn fxs2_before_the_first_window_refuses() {
     let pool = pool().await;
-    let company = Uuid::new_v4();
+    let (from, to) = fx_pair(&pool, 0).await;
     let svc = FxService::new(pool.clone());
     svc.upsert_rate(NewRate {
-        company_id: Some(company),
-        from_currency: "USD".into(),
-        to_currency: "IDR".into(),
+        from_currency: from.clone(),
+        to_currency: to.clone(),
         rate: dec("15000"),
         effective_from: d(2026, 1, 1),
         effective_to: None,
@@ -116,7 +109,7 @@ async fn fxs2_before_the_first_window_refuses() {
     .unwrap();
 
     let e = svc
-        .spot_on_or_before(Some(company), "USD", "IDR", d(2025, 12, 31))
+        .spot_on_or_before(&from, &to, d(2025, 12, 31))
         .await
         .unwrap_err();
     assert!(matches!(e, FxError::NoRate { .. }), "got {e:?}");
@@ -128,12 +121,11 @@ async fn fxs2_before_the_first_window_refuses() {
 #[tokio::test]
 async fn fxs3_a_gap_refuses_instead_of_resurrecting_a_closed_window() {
     let pool = pool().await;
-    let company = Uuid::new_v4();
+    let (from, to) = fx_pair(&pool, 0).await;
     let svc = FxService::new(pool.clone());
     svc.upsert_rate(NewRate {
-        company_id: Some(company),
-        from_currency: "USD".into(),
-        to_currency: "IDR".into(),
+        from_currency: from.clone(),
+        to_currency: to.clone(),
         rate: dec("15000"),
         effective_from: d(2026, 1, 1),
         effective_to: Some(d(2026, 6, 30)),
@@ -143,9 +135,8 @@ async fn fxs3_a_gap_refuses_instead_of_resurrecting_a_closed_window() {
     .await
     .unwrap();
     svc.upsert_rate(NewRate {
-        company_id: Some(company),
-        from_currency: "USD".into(),
-        to_currency: "IDR".into(),
+        from_currency: from.clone(),
+        to_currency: to.clone(),
         rate: dec("16000"),
         effective_from: d(2026, 8, 1),
         effective_to: None,
@@ -159,7 +150,7 @@ async fn fxs3_a_gap_refuses_instead_of_resurrecting_a_closed_window() {
     // NOT return the June-closed 15,000.
     for on in [d(2026, 7, 1), d(2026, 7, 15), d(2026, 7, 31)] {
         let e = svc
-            .spot_on_or_before(Some(company), "USD", "IDR", on)
+            .spot_on_or_before(&from, &to, on)
             .await
             .unwrap_err();
         assert!(
@@ -169,14 +160,14 @@ async fn fxs3_a_gap_refuses_instead_of_resurrecting_a_closed_window() {
     }
     // Both sides of the hole still read their own rows.
     assert_eq!(
-        svc.spot_on_or_before(Some(company), "USD", "IDR", d(2026, 6, 30))
+        svc.spot_on_or_before(&from, &to, d(2026, 6, 30))
             .await
             .unwrap()
             .rate,
         dec("15000")
     );
     assert_eq!(
-        svc.spot_on_or_before(Some(company), "USD", "IDR", d(2026, 8, 1))
+        svc.spot_on_or_before(&from, &to, d(2026, 8, 1))
             .await
             .unwrap()
             .rate,
@@ -184,77 +175,17 @@ async fn fxs3_a_gap_refuses_instead_of_resurrecting_a_closed_window() {
     );
 }
 
-/// FXS-4 — scope: a company row wins over a global row for the scoped caller, and the platform
-/// (None-company) caller reads the global row. Fresh fake pair so the global window is unique.
-#[tokio::test]
-async fn fxs4_company_scope_wins_over_global_for_the_scoped_caller() {
-    let pool = pool().await;
-    let from = fake_currency(&pool, 2).await;
-    let to = fake_currency(&pool, 0).await;
-    let company = Uuid::new_v4();
-    let svc = FxService::new(pool.clone());
-
-    // The GLOBAL row (no company bound — the admin path registers it unscoped).
-    svc.upsert_rate(NewRate {
-        company_id: None,
-        from_currency: from.clone(),
-        to_currency: to.clone(),
-        rate: dec("9999"),
-        effective_from: d(2026, 1, 1),
-        effective_to: None,
-        rate_type: RateType::Spot,
-        source: None,
-    })
-    .await
-    .unwrap();
-    // The COMPANY row, same window.
-    svc.upsert_rate(NewRate {
-        company_id: Some(company),
-        from_currency: from.clone(),
-        to_currency: to.clone(),
-        rate: dec("1111"),
-        effective_from: d(2026, 1, 1),
-        effective_to: None,
-        rate_type: RateType::Spot,
-        source: None,
-    })
-    .await
-    .unwrap();
-
-    let scoped = svc
-        .spot_on_or_before(Some(company), &from, &to, d(2026, 6, 1))
-        .await
-        .unwrap();
-    assert_eq!(
-        scoped.rate,
-        dec("1111"),
-        "the company row wins over the global one"
-    );
-    let platform = svc
-        .spot_on_or_before(None, &from, &to, d(2026, 6, 1))
-        .await
-        .unwrap();
-    assert_eq!(
-        platform.rate,
-        dec("9999"),
-        "the platform caller reads the global row"
-    );
-}
-
-/// FXS-5 — a RAW read, not a conversion: no reciprocal fallback (a to→from row does not serve a
+/// FXS-4 — a RAW read, not a conversion: no reciprocal fallback (a to→from row does not serve a
 /// from→to ask), and no rounding — a 10-dp rate comes back verbatim even when the quote currency
 /// has 0 minor units (convert would round; spot never touches precision).
 #[tokio::test]
-async fn fxs5_raw_read_no_inverse_no_rounding() {
+async fn fxs4_raw_read_no_inverse_no_rounding() {
     let pool = pool().await;
-    let from = fake_currency(&pool, 2).await;
-    let to = fake_currency(&pool, 0).await;
-    let company = Uuid::new_v4();
+    let (from, to) = fx_pair(&pool, 0).await;
     let svc = FxService::new(pool.clone());
 
     // Only the FORWARD row of the reverse pair exists.
     svc.upsert_rate(NewRate {
-        company_id: Some(company),
         from_currency: to.clone(),
         to_currency: from.clone(),
         rate: dec("0.000061532203"),
@@ -266,7 +197,7 @@ async fn fxs5_raw_read_no_inverse_no_rounding() {
     .await
     .unwrap();
     let e = svc
-        .spot_on_or_before(Some(company), &from, &to, d(2026, 6, 1))
+        .spot_on_or_before(&from, &to, d(2026, 6, 1))
         .await
         .unwrap_err();
     assert!(
@@ -276,7 +207,6 @@ async fn fxs5_raw_read_no_inverse_no_rounding() {
 
     // A full-precision direct rate reads back VERBATIM.
     svc.upsert_rate(NewRate {
-        company_id: Some(company),
         from_currency: from.clone(),
         to_currency: to.clone(),
         rate: dec("16250.1234567890"),
@@ -288,7 +218,7 @@ async fn fxs5_raw_read_no_inverse_no_rounding() {
     .await
     .unwrap();
     let s = svc
-        .spot_on_or_before(Some(company), &from, &to, d(2026, 6, 1))
+        .spot_on_or_before(&from, &to, d(2026, 6, 1))
         .await
         .unwrap();
     assert_eq!(
@@ -298,19 +228,17 @@ async fn fxs5_raw_read_no_inverse_no_rounding() {
     );
 }
 
-/// FXS-6 — provenance stamping: a default registration lands 'spot'/unstamped; an explicit one
+/// FXS-5 — provenance stamping: a default registration lands 'spot'/unstamped; an explicit one
 /// lands its own rate_type + source on the row.
 #[tokio::test]
-async fn fxs6_rate_type_and_source_stamp_the_row() {
+async fn fxs5_rate_type_and_source_stamp_the_row() {
     let pool = pool().await;
     let from = fake_currency(&pool, 2).await;
     let to = fake_currency(&pool, 2).await;
-    let company = Uuid::new_v4();
     let svc = FxService::new(pool.clone());
 
     let dflt = svc
         .upsert_rate(NewRate {
-            company_id: Some(company),
             from_currency: from.clone(),
             to_currency: to.clone(),
             rate: dec("100"),
@@ -323,7 +251,6 @@ async fn fxs6_rate_type_and_source_stamp_the_row() {
         .unwrap();
     let stamped = svc
         .upsert_rate(NewRate {
-            company_id: Some(company),
             from_currency: to.clone(),
             to_currency: from.clone(),
             rate: dec("0.01"),
@@ -362,10 +289,10 @@ async fn fxs6_rate_type_and_source_stamp_the_row() {
     );
 }
 
-/// FXS-7 — the published port carries the same read as the contract `SpotRate` (and its default
+/// FXS-6 — the published port carries the same read as the contract `SpotRate` (and its default
 /// registration is a spot row). Sibling modules must not reach into application internals.
 #[tokio::test]
-async fn fxs7_the_port_carries_the_contract_spot_rate() {
+async fn fxs6_the_port_carries_the_contract_spot_rate() {
     use backbone_corporate::exports::CorporateFxPort;
     use backbone_corporate::CorporateModule;
 
@@ -375,13 +302,10 @@ async fn fxs7_the_port_carries_the_contract_spot_rate() {
         .build()
         .expect("build module");
     let port = module.fx_port();
-    let from = fake_currency(&pool, 2).await;
-    let to = fake_currency(&pool, 2).await;
-    let company = Uuid::new_v4();
+    let (from, to) = fx_pair(&pool, 2).await;
 
     let id = port
         .register_rate(backbone_corporate::exports::RegisterRate {
-            company_id: Some(company),
             from: from.clone(),
             to: to.clone(),
             rate: dec("15500"),
@@ -394,7 +318,7 @@ async fn fxs7_the_port_carries_the_contract_spot_rate() {
         .expect("register via port");
 
     let s = port
-        .spot_on_or_before(Some(company), &from, &to, d(2026, 9, 9))
+        .spot_on_or_before(&from, &to, d(2026, 9, 9))
         .await
         .expect("spot via port");
     assert_eq!(s.rate, dec("15500"));

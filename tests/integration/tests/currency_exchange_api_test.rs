@@ -24,7 +24,6 @@ impl TestDataGenerator for CurrencyExchangeTestData {
         let now = Utc::now().to_rfc3339();
         json!({
             "id": Uuid::new_v4().to_string(),
-            "company_id": null,
             "from_currency": format!("Test {}", Uuid::new_v4().to_string().split('-').next().unwrap()),
             "to_currency": format!("Test {}", Uuid::new_v4().to_string().split('-').next().unwrap()),
             "rate": 0,
@@ -40,7 +39,6 @@ impl TestDataGenerator for CurrencyExchangeTestData {
         let now = Utc::now().to_rfc3339();
         json!({
             "id": id,
-            "company_id": null,
             "from_currency": format!("Test {}", Uuid::new_v4().to_string().split('-').next().unwrap()),
             "to_currency": format!("Test {}", Uuid::new_v4().to_string().split('-').next().unwrap()),
             "rate": 0,

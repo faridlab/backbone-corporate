@@ -44,6 +44,7 @@ use rust_decimal::Decimal;
 use chrono::NaiveDate;
 use uuid::Uuid;
 use crate::application::service::fx_service::{Converted, FxError, NewRate};
+use crate::domain::entity::RateType;
 
 // --- FX validated endpoints -------------------------------------------------
 // These are the sanctioned write/convert throat for the rate table, going
@@ -52,7 +53,6 @@ use crate::application::service::fx_service::{Converted, FxError, NewRate};
 
 #[derive(Debug, Deserialize)]
 pub struct RegisterRateBody {
-    pub company_id: Option<Uuid>,
     pub from: String,
     pub to: String,
     pub rate: Decimal,
@@ -62,7 +62,6 @@ pub struct RegisterRateBody {
 
 #[derive(Debug, Deserialize)]
 pub struct ConvertBody {
-    pub company_id: Option<Uuid>,
     pub amount: Decimal,
     pub from: String,
     pub to: String,
@@ -98,12 +97,13 @@ pub async fn register_fx_rate(
     let id = state
         .fx_service
         .upsert_rate(NewRate {
-            company_id: body.company_id,
             from_currency: body.from,
             to_currency: body.to,
             rate: body.rate,
             effective_from: body.effective_from,
             effective_to: body.effective_to,
+            rate_type: RateType::Spot,
+            source: None,
         })
         .await
         .map_err(http_err_from_fx)?;
@@ -117,7 +117,7 @@ pub async fn convert_fx(
 ) -> Result<Json<ConvertedJson>, (StatusCode, String)> {
     let c = state
         .fx_service
-        .convert(body.company_id, body.amount, &body.from, &body.to, body.on_date)
+        .convert(body.amount, &body.from, &body.to, body.on_date)
         .await
         .map_err(http_err_from_fx)?;
     Ok(Json(ConvertedJson::from(c)))

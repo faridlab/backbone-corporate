@@ -5,7 +5,7 @@
 //! transaction date**, so historical documents reproduce the number they were booked with. A rate is
 //! DIRECTIONAL (1 `from` = `rate` × `to`) and effective-dated; a rate change coexists with history.
 //!
-//! The maturity invariant is that a rate must be UNAMBIGUOUS: for one directed pair (+ company scope) the
+//! The maturity invariant is that a rate must be UNAMBIGUOUS: for one directed pair the
 //! effective windows must not overlap, or `convert` for a historical date would match two rows and pick one
 //! nondeterministically — the same past transaction re-translating to a different number run-to-run.
 //! `upsert_rate` rejects an overlapping window; the DB has an EXCLUDE backstop.
@@ -49,7 +49,6 @@ pub enum FxError {
 }
 
 pub struct NewRate {
-    pub company_id: Option<Uuid>,
     pub from_currency: String,
     pub to_currency: String,
     pub rate: Decimal,
@@ -86,8 +85,8 @@ impl FxService {
         Self { pool }
     }
 
-    /// Register a rate for a directed pair, rejecting a window that overlaps an existing one (same pair +
-    /// same company scope). This is what keeps `convert` deterministic.
+    /// Register a rate for a directed pair, rejecting a window that overlaps an existing one
+    /// (same pair). This is what keeps `convert` deterministic.
     pub async fn upsert_rate(&self, r: NewRate) -> Result<Uuid, FxError> {
         let from = norm(&r.from_currency)?;
         let to = norm(&r.to_currency)?;
@@ -111,22 +110,13 @@ impl FxService {
         }
 
         let mut tx = self.pool.begin().await?;
-        // RLS fence (ADR-0008): bind the caller's company onto the transaction so the fence's USING
-        // clause lets the overlap-check SELECT see this company's rows (and, on INSERT, the WITH CHECK
-        // accepts the row). A NULL company_id (a GLOBAL rate) is NOT bound here: the currency_exchanges
-        // policy writes own-only, so a global rate must be created via the admin/bypass path. Binding
-        // would let a tenant forge a global rate, which is exactly what the fence exists to prevent.
-        if let Some(company) = r.company_id {
-            backbone_orm::company_scope::bind_company_on(&mut *tx, company).await?;
-        }
         let exchanges = CurrencyExchangeRepository::new(self.pool.clone());
-        // Overlap check within the same company scope (see CurrencyExchangeRepository::find_overlap_tx).
+        // Overlap check for the directed pair (see CurrencyExchangeRepository::find_overlap_tx).
         let overlap = exchanges
             .find_overlap_tx(
                 &mut *tx,
                 &from,
                 &to,
-                r.company_id,
                 r.effective_from,
                 r.effective_to,
             )
@@ -141,7 +131,6 @@ impl FxService {
                 &mut *tx,
                 &NewCurrencyExchangeRow {
                     id,
-                    company_id: r.company_id,
                     from_currency: from.clone(),
                     to_currency: to.clone(),
                     rate: r.rate,
@@ -157,11 +146,11 @@ impl FxService {
     }
 
     /// Convert `amount` from → to at the rate effective on `on_date`, rounded to the quote currency's
-    /// minor-unit precision. A same-currency conversion is the identity (rate 1). A company-scoped rate
-    /// wins over a global (company_id IS NULL) rate; among candidates the most recent `effective_from` wins.
+    /// minor-unit precision. A same-currency conversion is the identity (rate 1). The table holds one
+    /// shared rate per directed pair; among windows that cover a date the most recent
+    /// `effective_from` wins (overlap is prevented on write, so at most one covers).
     pub async fn convert(
         &self,
-        company_id: Option<Uuid>,
         amount: Decimal,
         from_currency: &str,
         to_currency: &str,
@@ -179,20 +168,10 @@ impl FxService {
             });
         }
 
-        // RLS fence (ADR-0008): `corporate.currency_exchanges` is company-fenced. With `app.company_id`
-        // unset the fence shows ZERO rows to a non-super role — so an FX read on a scoped connection
-        // returned NoRate even when rates existed, breaking every multi-currency consumer (Phase 4 F1).
-        //
-        // Fix: run the whole read path in ONE transaction, bind `app.company_id` onto it transaction-local
-        // when the caller is scoped, so the fence's USING clause admits this company's rows AND the
-        // global (NULL-company) fallback rows. The setting is transaction-scoped (`set_config(..., true)`),
-        // so it is discarded on commit and can never ride a pooled connection into the next request. A
-        // `None` company (platform caller) leaves the setting unset; under the non-super role that sees
-        // only the global rows (USING `company_id IS NULL`).
+        // The whole read path runs in ONE transaction on the caller's pool: the module owns no
+        // tenancy of its own (ADR-0029) — where the composing service scopes the table, its
+        // decorator's policy rides the caller's session, and the module simply reads through it.
         let mut tx = self.pool.begin().await?;
-        if let Some(company) = company_id {
-            backbone_orm::company_scope::bind_company_on(&mut *tx, company).await?;
-        }
 
         let exchanges = CurrencyExchangeRepository::new(self.pool.clone());
         let currencies = CurrencyRepository::new(self.pool.clone());
@@ -202,9 +181,8 @@ impl FxService {
             None => return Err(FxError::UnknownCurrency(to)),
         };
 
-        // Direct lookup: prefer a company rate over a global one, then the most recently-effective window.
-        // Deterministic — overlap is prevented on write, so at most one window per scope covers the date;
-        // the ORDER BY only chooses between company vs global.
+        // Direct lookup: the most recently-effective window covering the date. Deterministic —
+        // overlap is prevented on write, so at most one window covers the date.
         if let Some((rate, rate_id, _effective_from)) = exchanges
             .find_effective_rate_tx(&mut *tx, &from, &to, on_date)
             .await?
@@ -259,12 +237,8 @@ impl FxService {
     /// on a gapless chain (consecutive windows, last one open) the row returned is exactly the one
     /// that started latest at-or-before the date, which is what a migration parity probe asserts
     /// row-for-row. A gap refuses with `NoRate` — the consumer must not guess a retired rate.
-    ///
-    /// Scope follows `convert`: the caller's company is bound transaction-local so the fence admits
-    /// own rows AND global fallback rows, with a company row winning over a global one.
     pub async fn spot_on_or_before(
         &self,
-        company_id: Option<Uuid>,
         from_currency: &str,
         to_currency: &str,
         on_or_before: NaiveDate,
@@ -273,9 +247,6 @@ impl FxService {
         let to = norm(to_currency)?;
 
         let mut tx = self.pool.begin().await?;
-        if let Some(company) = company_id {
-            backbone_orm::company_scope::bind_company_on(&mut *tx, company).await?;
-        }
         let exchanges = CurrencyExchangeRepository::new(self.pool.clone());
         let found = exchanges
             .find_effective_rate_tx(&mut *tx, &from, &to, on_or_before)
@@ -306,8 +277,7 @@ pub struct SpotRate {
 }
 
 // (bind_company_tx / lookup_rate_on / decimal_places_on used to live here as inlined SQL. They moved
-// into CurrencyExchangeRepository / CurrencyRepository, and the company bind now uses the framework's
-// backbone_orm::company_scope::bind_company_on — the service no longer holds SQL.)
+// into CurrencyExchangeRepository / CurrencyRepository — the service no longer holds SQL.)
 fn norm(iso: &str) -> Result<String, FxError> {
     let t = iso.trim().to_uppercase();
     if t.len() < 3 || t.len() > 3 {

@@ -35,7 +35,6 @@ pub trait CorporateFxPort: Send + Sync {
     /// to the quote currency's minor-unit precision. Same-currency is identity.
     async fn convert(
         &self,
-        company_id: Option<Uuid>,
         amount: Decimal,
         from: &str,
         to: &str,
@@ -44,19 +43,17 @@ pub trait CorporateFxPort: Send + Sync {
 
     /// Read the spot rate in force for a directed pair at (or immediately
     /// before) `on_or_before` — a raw rate read (no amount, no rounding, no
-    /// inverse fallback). Refuses when no window covers the date; a company
-    /// rate wins over a global one.
+    /// inverse fallback). Refuses when no window covers the date.
     async fn spot_on_or_before(
         &self,
-        company_id: Option<Uuid>,
         from: &str,
         to: &str,
         on_or_before: NaiveDate,
     ) -> Result<SpotRate>;
 
     /// Register a directed, effective-dated rate, rejecting a window that
-    /// overlaps an existing one for the same pair + company scope. Returns the
-    /// new (or updated) rate row id.
+    /// overlaps an existing one for the same pair. Rates are shared reference
+    /// data (one table-wide rate per directed pair). Returns the new rate row id.
     async fn register_rate(&self, rate: RegisterRate) -> Result<Uuid>;
 }
 
@@ -76,7 +73,6 @@ impl CorporateFxServiceImpl {
 impl CorporateFxPort for CorporateFxServiceImpl {
     async fn convert(
         &self,
-        company_id: Option<Uuid>,
         amount: Decimal,
         from: &str,
         to: &str,
@@ -84,7 +80,7 @@ impl CorporateFxPort for CorporateFxServiceImpl {
     ) -> Result<Converted> {
         let c = self
             .inner
-            .convert(company_id, amount, from, to, on_date)
+            .convert(amount, from, to, on_date)
             .await?;
         Ok(Converted {
             amount: c.amount,
@@ -97,14 +93,13 @@ impl CorporateFxPort for CorporateFxServiceImpl {
 
     async fn spot_on_or_before(
         &self,
-        company_id: Option<Uuid>,
         from: &str,
         to: &str,
         on_or_before: NaiveDate,
     ) -> Result<SpotRate> {
         let s = self
             .inner
-            .spot_on_or_before(company_id, from, to, on_or_before)
+            .spot_on_or_before(from, to, on_or_before)
             .await?;
         Ok(SpotRate {
             rate: s.rate,
@@ -116,7 +111,6 @@ impl CorporateFxPort for CorporateFxServiceImpl {
     async fn register_rate(&self, r: RegisterRate) -> Result<Uuid> {
         self.inner
             .upsert_rate(NewRate {
-                company_id: r.company_id,
                 from_currency: r.from,
                 to_currency: r.to,
                 rate: r.rate,

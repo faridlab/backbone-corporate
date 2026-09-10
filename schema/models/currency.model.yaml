@@ -61,16 +61,17 @@ models:
     collection: currency_exchanges
     description: "An effective-dated directional FX rate: 1 from_currency = rate quote-currency"
 
+    # Tenancy (ADR-0029): the module is tenant-agnostic — no tenant key, no per-unit unique.
+    # An FX rate is shared reference data (the same visibility shape as the currencies master):
+    # one table-wide rate per directed pair, effective-dated. The former company-scoped rate
+    # lane (a per-company rate overriding the global one) was removed with the company_id
+    # column; any org scoping a deployment wants on this table is installed by the composing
+    # service's tenancy decorator at composition time, never by the module.
     fields:
       id:
         type: uuid
         attributes: ["@id", "@default(uuid)"]
         description: "Unique rate identifier"
-
-      company_id:
-        type: uuid?
-        attributes: ["@exclude_from_foreign_key_check"]
-        description: "Books owner # logical FK to organization.Company.id; null = a global/default rate"
 
       from_currency:
         type: string
@@ -115,8 +116,6 @@ models:
       # The lookup: pick the row for a directed pair effective on the transaction date.
       - type: index
         fields: [from_currency, to_currency, effective_from]
-      - type: index
-        fields: [company_id]
 
 enums:
   - name: CurrencyStatus

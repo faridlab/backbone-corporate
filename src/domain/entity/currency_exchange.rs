@@ -51,7 +51,6 @@ impl std::ops::Deref for CurrencyExchangeId {
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct CurrencyExchange {
     pub id: Uuid,
-    pub company_id: Option<Uuid>,
     pub from_currency: String,
     pub to_currency: String,
     pub rate: Decimal,
@@ -74,7 +73,6 @@ impl CurrencyExchange {
     pub fn new(from_currency: String, to_currency: String, rate: Decimal, effective_from: NaiveDate, rate_type: RateType) -> Self {
         Self {
             id: Uuid::new_v4(),
-            company_id: None,
             from_currency,
             to_currency,
             rate,
@@ -141,12 +139,6 @@ impl CurrencyExchange {
     // Fluent Setters (with_* for optional fields)
     // ==========================================================
 
-    /// Set the company_id field (chainable)
-    pub fn with_company_id(mut self, value: Uuid) -> Self {
-        self.company_id = Some(value);
-        self
-    }
-
     /// Set the effective_to field (chainable)
     pub fn with_effective_to(mut self, value: NaiveDate) -> Self {
         self.effective_to = Some(value);
@@ -167,9 +159,6 @@ impl CurrencyExchange {
     pub fn apply_patch(&mut self, fields: std::collections::HashMap<String, serde_json::Value>) {
         for (key, value) in fields {
             match key.as_str() {
-                "company_id" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.company_id = v; }
-                }
                 "from_currency" => {
                     if let Ok(v) = serde_json::from_value(value) { self.from_currency = v; }
                 }
@@ -245,15 +234,11 @@ impl backbone_orm::EntityRepoMeta for CurrencyExchange {
     fn column_types() -> std::collections::HashMap<String, String> {
         let mut m = std::collections::HashMap::new();
         m.insert("id".to_string(), "uuid".to_string());
-        m.insert("company_id".to_string(), "uuid".to_string());
         m.insert("rate_type".to_string(), "rate_type".to_string());
         m
     }
     fn search_fields() -> &'static [&'static str] {
         &["from_currency", "to_currency"]
-    }
-    fn company_field() -> Option<&'static str> {
-        Some("company_id")
     }
 }
 
@@ -263,7 +248,6 @@ impl backbone_orm::EntityRepoMeta for CurrencyExchange {
 /// System fields (id, metadata, timestamps) are auto-initialized.
 #[derive(Debug, Clone, Default)]
 pub struct CurrencyExchangeBuilder {
-    company_id: Option<Uuid>,
     from_currency: Option<String>,
     to_currency: Option<String>,
     rate: Option<Decimal>,
@@ -274,12 +258,6 @@ pub struct CurrencyExchangeBuilder {
 }
 
 impl CurrencyExchangeBuilder {
-    /// Set the company_id field (optional)
-    pub fn company_id(mut self, value: Uuid) -> Self {
-        self.company_id = Some(value);
-        self
-    }
-
     /// Set the from_currency field (required)
     pub fn from_currency(mut self, value: String) -> Self {
         self.from_currency = Some(value);
@@ -333,7 +311,6 @@ impl CurrencyExchangeBuilder {
 
         Ok(CurrencyExchange {
             id: Uuid::new_v4(),
-            company_id: self.company_id,
             from_currency,
             to_currency,
             rate,

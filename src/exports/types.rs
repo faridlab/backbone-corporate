@@ -109,7 +109,6 @@ impl From<CurrencyExchangeId> for Uuid {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CurrencyExchangeDto {
     pub id: CurrencyExchangeId,
-    pub company_id: Option<Uuid>,
     pub from_currency: String,
     pub to_currency: String,
     pub rate: Decimal,
@@ -337,10 +336,9 @@ pub struct Converted {
 
 /// Request to register a directed, effective-dated rate:
 /// `1 from = rate * to`, valid over `[effective_from, effective_to]`.
-/// A `None` company_id is a GLOBAL rate (visible to every tenant).
+/// Rates are shared reference data — one table-wide rate per directed pair.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RegisterRate {
-    pub company_id: Option<Uuid>,
     pub from: String,
     pub to: String,
     pub rate: Decimal,

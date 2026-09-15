@@ -7,7 +7,7 @@ info:
     This API provides 11 standard CRUD endpoints for each model.
 
 servers:
-  - url: http://localhost:3000
+  - url: /
     description: Development server
 
 tags:
@@ -23,7 +23,7 @@ tags:
     description: Territory management endpoints
 
 paths:
-  /api/v1/currencies:
+  /api/v1/corporate/currencies:
     get:
       tags:
         - Currencies
@@ -69,7 +69,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
-  /api/v1/currencies/{id}:
+  /api/v1/corporate/currencies/{id}:
     parameters:
       - $ref: '#/components/parameters/IdParam'
 
@@ -141,7 +141,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/v1/currencies/bulk:
+  /api/v1/corporate/currencies/bulk:
     post:
       tags:
         - Currencies
@@ -233,7 +233,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/currencies/upsert:
+  /api/v1/corporate/currencies/upsert:
     post:
       tags:
         - Currencies
@@ -263,7 +263,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Currency'
 
-  /api/v1/currencies/trash:
+  /api/v1/corporate/currencies/trash:
     get:
       tags:
         - Currencies
@@ -280,7 +280,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/CurrencyList'
 
-  /api/v1/currencies/{id}/restore:
+  /api/v1/corporate/currencies/{id}/restore:
     parameters:
       - $ref: '#/components/parameters/IdParam'
     post:
@@ -298,7 +298,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/v1/currencies/empty:
+  /api/v1/corporate/currencies/empty:
     delete:
       tags:
         - Currencies
@@ -315,7 +315,7 @@ paths:
                   deleted_count:
                     type: integer
 
-  /api/v1/currencies/delete/bulk:
+  /api/v1/corporate/currencies/delete/bulk:
     post:
       tags:
         - Currencies
@@ -335,7 +335,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/currencies/restore/bulk:
+  /api/v1/corporate/currencies/restore/bulk:
     post:
       tags:
         - Currencies
@@ -353,7 +353,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/currencies/restore/all:
+  /api/v1/corporate/currencies/restore/all:
     post:
       tags:
         - Currencies
@@ -369,7 +369,7 @@ paths:
                 properties:
                   restored: { type: integer }
 
-  /api/v1/currencies/trash/bulk:
+  /api/v1/corporate/currencies/trash/bulk:
     delete:
       tags:
         - Currencies
@@ -389,7 +389,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/currency_exchanges:
+  /api/v1/corporate/currency_exchanges:
     get:
       tags:
         - CurrencyExchanges
@@ -435,7 +435,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
-  /api/v1/currency_exchanges/{id}:
+  /api/v1/corporate/currency_exchanges/{id}:
     parameters:
       - $ref: '#/components/parameters/IdParam'
 
@@ -507,7 +507,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/v1/currency_exchanges/bulk:
+  /api/v1/corporate/currency_exchanges/bulk:
     post:
       tags:
         - CurrencyExchanges
@@ -599,7 +599,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/currency_exchanges/upsert:
+  /api/v1/corporate/currency_exchanges/upsert:
     post:
       tags:
         - CurrencyExchanges
@@ -629,7 +629,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/CurrencyExchange'
 
-  /api/v1/currency_exchanges/trash:
+  /api/v1/corporate/currency_exchanges/trash:
     get:
       tags:
         - CurrencyExchanges
@@ -646,7 +646,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/CurrencyExchangeList'
 
-  /api/v1/currency_exchanges/{id}/restore:
+  /api/v1/corporate/currency_exchanges/{id}/restore:
     parameters:
       - $ref: '#/components/parameters/IdParam'
     post:
@@ -664,7 +664,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/v1/currency_exchanges/empty:
+  /api/v1/corporate/currency_exchanges/empty:
     delete:
       tags:
         - CurrencyExchanges
@@ -681,7 +681,7 @@ paths:
                   deleted_count:
                     type: integer
 
-  /api/v1/currency_exchanges/delete/bulk:
+  /api/v1/corporate/currency_exchanges/delete/bulk:
     post:
       tags:
         - CurrencyExchanges
@@ -701,7 +701,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/currency_exchanges/restore/bulk:
+  /api/v1/corporate/currency_exchanges/restore/bulk:
     post:
       tags:
         - CurrencyExchanges
@@ -719,7 +719,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/currency_exchanges/restore/all:
+  /api/v1/corporate/currency_exchanges/restore/all:
     post:
       tags:
         - CurrencyExchanges
@@ -735,7 +735,7 @@ paths:
                 properties:
                   restored: { type: integer }
 
-  /api/v1/currency_exchanges/trash/bulk:
+  /api/v1/corporate/currency_exchanges/trash/bulk:
     delete:
       tags:
         - CurrencyExchanges
@@ -755,7 +755,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/incoterms:
+  /api/v1/corporate/incoterms:
     get:
       tags:
         - Incoterms
@@ -801,7 +801,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
-  /api/v1/incoterms/{id}:
+  /api/v1/corporate/incoterms/{id}:
     parameters:
       - $ref: '#/components/parameters/IdParam'
 
@@ -873,7 +873,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/v1/incoterms/bulk:
+  /api/v1/corporate/incoterms/bulk:
     post:
       tags:
         - Incoterms
@@ -965,7 +965,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/incoterms/upsert:
+  /api/v1/corporate/incoterms/upsert:
     post:
       tags:
         - Incoterms
@@ -995,7 +995,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Incoterm'
 
-  /api/v1/incoterms/trash:
+  /api/v1/corporate/incoterms/trash:
     get:
       tags:
         - Incoterms
@@ -1012,7 +1012,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/IncotermList'
 
-  /api/v1/incoterms/{id}/restore:
+  /api/v1/corporate/incoterms/{id}/restore:
     parameters:
       - $ref: '#/components/parameters/IdParam'
     post:
@@ -1030,7 +1030,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/v1/incoterms/empty:
+  /api/v1/corporate/incoterms/empty:
     delete:
       tags:
         - Incoterms
@@ -1047,7 +1047,7 @@ paths:
                   deleted_count:
                     type: integer
 
-  /api/v1/incoterms/delete/bulk:
+  /api/v1/corporate/incoterms/delete/bulk:
     post:
       tags:
         - Incoterms
@@ -1067,7 +1067,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/incoterms/restore/bulk:
+  /api/v1/corporate/incoterms/restore/bulk:
     post:
       tags:
         - Incoterms
@@ -1085,7 +1085,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/incoterms/restore/all:
+  /api/v1/corporate/incoterms/restore/all:
     post:
       tags:
         - Incoterms
@@ -1101,7 +1101,7 @@ paths:
                 properties:
                   restored: { type: integer }
 
-  /api/v1/incoterms/trash/bulk:
+  /api/v1/corporate/incoterms/trash/bulk:
     delete:
       tags:
         - Incoterms
@@ -1121,7 +1121,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/terms_and_conditionses:
+  /api/v1/corporate/terms_and_conditionses:
     get:
       tags:
         - TermsAndConditionses
@@ -1167,7 +1167,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
-  /api/v1/terms_and_conditionses/{id}:
+  /api/v1/corporate/terms_and_conditionses/{id}:
     parameters:
       - $ref: '#/components/parameters/IdParam'
 
@@ -1239,7 +1239,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/v1/terms_and_conditionses/bulk:
+  /api/v1/corporate/terms_and_conditionses/bulk:
     post:
       tags:
         - TermsAndConditionses
@@ -1331,7 +1331,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/terms_and_conditionses/upsert:
+  /api/v1/corporate/terms_and_conditionses/upsert:
     post:
       tags:
         - TermsAndConditionses
@@ -1361,7 +1361,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/TermsAndConditions'
 
-  /api/v1/terms_and_conditionses/trash:
+  /api/v1/corporate/terms_and_conditionses/trash:
     get:
       tags:
         - TermsAndConditionses
@@ -1378,7 +1378,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/TermsAndConditionsList'
 
-  /api/v1/terms_and_conditionses/{id}/restore:
+  /api/v1/corporate/terms_and_conditionses/{id}/restore:
     parameters:
       - $ref: '#/components/parameters/IdParam'
     post:
@@ -1396,7 +1396,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/v1/terms_and_conditionses/empty:
+  /api/v1/corporate/terms_and_conditionses/empty:
     delete:
       tags:
         - TermsAndConditionses
@@ -1413,7 +1413,7 @@ paths:
                   deleted_count:
                     type: integer
 
-  /api/v1/terms_and_conditionses/delete/bulk:
+  /api/v1/corporate/terms_and_conditionses/delete/bulk:
     post:
       tags:
         - TermsAndConditionses
@@ -1433,7 +1433,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/terms_and_conditionses/restore/bulk:
+  /api/v1/corporate/terms_and_conditionses/restore/bulk:
     post:
       tags:
         - TermsAndConditionses
@@ -1451,7 +1451,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/terms_and_conditionses/restore/all:
+  /api/v1/corporate/terms_and_conditionses/restore/all:
     post:
       tags:
         - TermsAndConditionses
@@ -1467,7 +1467,7 @@ paths:
                 properties:
                   restored: { type: integer }
 
-  /api/v1/terms_and_conditionses/trash/bulk:
+  /api/v1/corporate/terms_and_conditionses/trash/bulk:
     delete:
       tags:
         - TermsAndConditionses
@@ -1487,7 +1487,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/territories:
+  /api/v1/corporate/territories:
     get:
       tags:
         - Territories
@@ -1533,7 +1533,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
-  /api/v1/territories/{id}:
+  /api/v1/corporate/territories/{id}:
     parameters:
       - $ref: '#/components/parameters/IdParam'
 
@@ -1605,7 +1605,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/v1/territories/bulk:
+  /api/v1/corporate/territories/bulk:
     post:
       tags:
         - Territories
@@ -1697,7 +1697,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/territories/upsert:
+  /api/v1/corporate/territories/upsert:
     post:
       tags:
         - Territories
@@ -1727,7 +1727,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Territory'
 
-  /api/v1/territories/trash:
+  /api/v1/corporate/territories/trash:
     get:
       tags:
         - Territories
@@ -1744,7 +1744,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/TerritoryList'
 
-  /api/v1/territories/{id}/restore:
+  /api/v1/corporate/territories/{id}/restore:
     parameters:
       - $ref: '#/components/parameters/IdParam'
     post:
@@ -1762,7 +1762,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/v1/territories/empty:
+  /api/v1/corporate/territories/empty:
     delete:
       tags:
         - Territories
@@ -1779,7 +1779,7 @@ paths:
                   deleted_count:
                     type: integer
 
-  /api/v1/territories/delete/bulk:
+  /api/v1/corporate/territories/delete/bulk:
     post:
       tags:
         - Territories
@@ -1799,7 +1799,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/territories/restore/bulk:
+  /api/v1/corporate/territories/restore/bulk:
     post:
       tags:
         - Territories
@@ -1817,7 +1817,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/territories/restore/all:
+  /api/v1/corporate/territories/restore/all:
     post:
       tags:
         - Territories
@@ -1833,7 +1833,7 @@ paths:
                 properties:
                   restored: { type: integer }
 
-  /api/v1/territories/trash/bulk:
+  /api/v1/corporate/territories/trash/bulk:
     delete:
       tags:
         - Territories

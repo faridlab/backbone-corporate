@@ -1,6 +1,6 @@
 [package]
 name = "backbone-corporate"
-version = "0.5.20"
+version = "0.5.21"
 edition = "2021"
 description = "Reference masters: Currency + CurrencyExchange (effective-dated FX), Territory, Incoterm, TermsAndConditions — the multi-currency prerequisite (posts NO GL)"
 license = "MIT OR Apache-2.0"

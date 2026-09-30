@@ -235,6 +235,8 @@ impl backbone_orm::EntityRepoMeta for CurrencyExchange {
         let mut m = std::collections::HashMap::new();
         m.insert("id".to_string(), "uuid".to_string());
         m.insert("rate_type".to_string(), "rate_type".to_string());
+        m.insert("effective_from".to_string(), "date".to_string());
+        m.insert("effective_to".to_string(), "date".to_string());
         m
     }
     fn search_fields() -> &'static [&'static str] {

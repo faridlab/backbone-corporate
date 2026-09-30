@@ -13,7 +13,6 @@ pub mod terms_and_conditions_api_test;
 pub mod territory_api_test;
 
 // Re-exports for convenience
-pub use crud_test_base::*;
 pub use currency_api_test::*;
 pub use currency_exchange_api_test::*;
 pub use incoterm_api_test::*;

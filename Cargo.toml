@@ -1,6 +1,6 @@
 [package]
 name = "backbone-corporate"
-version = "0.6.0"
+version = "0.6.1"
 edition = "2021"
 description = "Reference masters: Currency + CurrencyExchange (effective-dated FX), Territory, Incoterm, TermsAndConditions — the multi-currency prerequisite (posts NO GL)"
 license = "MIT OR Apache-2.0"
@@ -90,7 +90,7 @@ pretty_assertions = "1.0"
 # The REAL backbone-accounting ledger — the FX seam converts a foreign amount and posts it as a balanced
 # IDR journal, proving corporate is the multi-currency prerequisite. Dev-dependency ONLY (zero normal edge):
 # corporate never posts GL; a consumer does. The seam plays that consumer.
-backbone-accounting = { version = "0.10.0" }
+backbone-accounting = { version = "0.11.0" }
 
 # Integration testing framework — the generated tests/integration_tests.rs hits a live server
 # via reqwest; guarded-route probes hit the router in-process via tower's ServiceExt::oneshot.

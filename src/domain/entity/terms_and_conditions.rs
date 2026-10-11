@@ -158,8 +158,6 @@ impl TermsAndConditions {
         }
     }
 
-    // <<< CUSTOM METHODS START >>>
-    // <<< CUSTOM METHODS END >>>
 }
 
 impl super::Entity for TermsAndConditions {

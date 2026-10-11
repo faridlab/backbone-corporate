@@ -11,8 +11,6 @@ use crate::domain::entity::Incoterm;
 /// enum containing a `Crud(CrudEvent<Incoterm>)` variant.
 pub type IncotermEvent = CrudEvent<Incoterm>;
 
-// <<< CUSTOM
-// END CUSTOM
 
 use backbone_messaging::{CrudEventPublisher, NoOpCrudEventPublisher};
 use std::sync::Arc;

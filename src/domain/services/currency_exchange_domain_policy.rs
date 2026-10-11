@@ -18,5 +18,3 @@ use crate::domain::entity::CurrencyExchange;
 /// service. `PermitAllPolicy` is the safe default until then.
 pub type CurrencyExchangeDomainPolicy = PermitAllPolicy<CurrencyExchange>;
 
-// <<< CUSTOM
-// END CUSTOM

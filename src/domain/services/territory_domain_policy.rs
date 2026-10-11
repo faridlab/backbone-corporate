@@ -18,5 +18,3 @@ use crate::domain::entity::Territory;
 /// service. `PermitAllPolicy` is the safe default until then.
 pub type TerritoryDomainPolicy = PermitAllPolicy<Territory>;
 
-// <<< CUSTOM
-// END CUSTOM

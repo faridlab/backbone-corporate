@@ -266,7 +266,7 @@ impl backbone_core::ApplyUpdateDto<UpdateTerritoryDto> for Territory {
 // Custom DTOs
 // =============================================================================
 
-// <<< CUSTOM DTOs
 // Add custom DTOs specific to Territory here.
 // This section will be preserved during regeneration.
 // >>> END CUSTOM DTOs
+

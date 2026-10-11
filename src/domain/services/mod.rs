@@ -14,5 +14,3 @@ pub use incoterm_domain_policy::IncotermDomainPolicy;
 pub use terms_and_conditions_domain_policy::TermsAndConditionsDomainPolicy;
 pub use territory_domain_policy::TerritoryDomainPolicy;
 
-// <<< CUSTOM
-// END CUSTOM

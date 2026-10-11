@@ -186,3 +186,4 @@ pub fn create_protected_currency_routes<A: AuthMiddleware + Send + Sync + 'stati
             }
         }))
 }
+

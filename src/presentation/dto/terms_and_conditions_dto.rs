@@ -266,7 +266,7 @@ impl backbone_core::ApplyUpdateDto<UpdateTermsAndConditionsDto> for TermsAndCond
 // Custom DTOs
 // =============================================================================
 
-// <<< CUSTOM DTOs
 // Add custom DTOs specific to TermsAndConditions here.
 // This section will be preserved during regeneration.
 // >>> END CUSTOM DTOs
+

@@ -32,5 +32,3 @@ pub type CurrencyExchangeService = GenericCrudService<
     CurrencyExchangeRepository,
 >;
 
-// <<< CUSTOM
-// END CUSTOM

@@ -18,9 +18,5 @@ pub fn currency_validator() -> CurrencyValidator {
         .rule(RequiredString::new("iso_code", |e: &Currency| &e.iso_code))
         .rule(RequiredString::new("name", |e: &Currency| &e.name))
         .rule(OptionalNotBlank::new("symbol", |e: &Currency| e.symbol.as_deref()))
-    // <<< CUSTOM RULES
-    // END CUSTOM RULES
 }
 
-// <<< CUSTOM
-// END CUSTOM

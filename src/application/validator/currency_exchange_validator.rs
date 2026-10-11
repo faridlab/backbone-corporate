@@ -18,9 +18,5 @@ pub fn currency_exchange_validator() -> CurrencyExchangeValidator {
         .rule(RequiredString::new("from_currency", |e: &CurrencyExchange| &e.from_currency))
         .rule(RequiredString::new("to_currency", |e: &CurrencyExchange| &e.to_currency))
         .rule(OptionalNotBlank::new("source", |e: &CurrencyExchange| e.source.as_deref()))
-    // <<< CUSTOM RULES
-    // END CUSTOM RULES
 }
 
-// <<< CUSTOM
-// END CUSTOM

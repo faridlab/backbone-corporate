@@ -12,5 +12,3 @@ pub mod incoterm_specification;
 pub mod terms_and_conditions_specification;
 pub mod territory_specification;
 
-// <<< CUSTOM
-// END CUSTOM

@@ -24,5 +24,3 @@ pub use terms_and_conditions_event_handlers::TermsAndConditionsEventHandler;
 pub use territory_events::{TerritoryEvent, TerritoryEventPublisher, NoopTerritoryEventPublisher};
 pub use territory_event_handlers::TerritoryEventHandler;
 
-// <<< CUSTOM
-// END CUSTOM

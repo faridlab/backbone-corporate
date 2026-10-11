@@ -17,9 +17,5 @@ pub fn territory_validator() -> TerritoryValidator {
     EntityValidator::new()
         .rule(RequiredString::new("code", |e: &Territory| &e.code))
         .rule(RequiredString::new("name", |e: &Territory| &e.name))
-    // <<< CUSTOM RULES
-    // END CUSTOM RULES
 }
 
-// <<< CUSTOM
-// END CUSTOM

@@ -18,5 +18,3 @@ use crate::domain::entity::TermsAndConditions;
 /// service. `PermitAllPolicy` is the safe default until then.
 pub type TermsAndConditionsDomainPolicy = PermitAllPolicy<TermsAndConditions>;
 
-// <<< CUSTOM
-// END CUSTOM

@@ -11,8 +11,6 @@ use crate::domain::entity::TermsAndConditions;
 /// enum containing a `Crud(CrudEvent<TermsAndConditions>)` variant.
 pub type TermsAndConditionsEvent = CrudEvent<TermsAndConditions>;
 
-// <<< CUSTOM
-// END CUSTOM
 
 use backbone_messaging::{CrudEventPublisher, NoOpCrudEventPublisher};
 use std::sync::Arc;

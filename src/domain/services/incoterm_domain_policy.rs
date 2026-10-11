@@ -18,5 +18,3 @@ use crate::domain::entity::Incoterm;
 /// service. `PermitAllPolicy` is the safe default until then.
 pub type IncotermDomainPolicy = PermitAllPolicy<Incoterm>;
 
-// <<< CUSTOM
-// END CUSTOM

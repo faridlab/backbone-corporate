@@ -17,9 +17,5 @@ pub fn incoterm_validator() -> IncotermValidator {
     EntityValidator::new()
         .rule(RequiredString::new("code", |e: &Incoterm| &e.code))
         .rule(RequiredString::new("name", |e: &Incoterm| &e.name))
-    // <<< CUSTOM RULES
-    // END CUSTOM RULES
 }
 
-// <<< CUSTOM
-// END CUSTOM

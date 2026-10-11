@@ -17,5 +17,3 @@ pub use incoterm_validator::{IncotermValidator, incoterm_validator};
 pub use terms_and_conditions_validator::{TermsAndConditionsValidator, terms_and_conditions_validator};
 pub use territory_validator::{TerritoryValidator, territory_validator};
 
-// <<< CUSTOM
-// END CUSTOM

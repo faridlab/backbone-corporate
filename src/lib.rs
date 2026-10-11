@@ -24,8 +24,6 @@ pub mod application;
 pub mod presentation;
 pub mod seeders;
 pub mod exports;
-// <<< CUSTOM MODULES
-// END CUSTOM
 
 // The module's extension (hand-written; ADR-0031).
 #[path = "lib.ext.rs"]
@@ -77,8 +75,6 @@ pub struct CorporateModule {
     pub(crate) territory_service: Arc<TerritoryService>,
     /// The module's extension state (`lib.ext.rs`); its fields read through `Deref`.
     pub(crate) ext: ModuleExt,
-    // <<< CUSTOM FIELDS
-    // END CUSTOM
 }
 
 impl std::ops::Deref for CorporateModule {
@@ -170,8 +166,6 @@ impl CorporateModule {
             .merge(create_territory_read_routes(self.territory_service.clone()))
     }
 
-    // <<< CUSTOM METHODS
-    // END CUSTOM
 }
 
 /// Builder for CorporateModule
@@ -179,8 +173,6 @@ pub struct CorporateModuleBuilder {
     db_pool: Option<PgPool>,
     /// The builder's extension state (`lib.ext.rs`); its fields read through `Deref`.
     ext: ModuleBuilderExt,
-    // <<< CUSTOM BUILDER FIELDS
-    // END CUSTOM
 }
 
 impl std::ops::Deref for CorporateModuleBuilder {
@@ -202,8 +194,6 @@ impl CorporateModuleBuilder {
         Self {
             db_pool: None,
             ext: Default::default(),
-            // <<< CUSTOM BUILDER DEFAULTS
-            // END CUSTOM
         }
     }
 
@@ -213,8 +203,6 @@ impl CorporateModuleBuilder {
         self
     }
 
-    // <<< CUSTOM - custom builder methods
-    // END CUSTOM
 
     /// Build the module with configured dependencies
     pub fn build(self) -> anyhow::Result<CorporateModule> {
@@ -241,8 +229,6 @@ impl CorporateModuleBuilder {
         let territory_repository = Arc::new(TerritoryRepository::new(db_pool.clone()));
         let territory_service = Arc::new(TerritoryService::with_repository(territory_repository.clone()));
 
-        // <<< CUSTOM
-        // END CUSTOM
 
         // The extension builds its own state from what the generated build made.
         let ext = self.ext.build(&ModuleParts {
@@ -266,8 +252,6 @@ impl CorporateModuleBuilder {
             terms_and_conditions_service,
             territory_service,
             ext,
-            // <<< CUSTOM
-            // END CUSTOM
         })
     }
 }

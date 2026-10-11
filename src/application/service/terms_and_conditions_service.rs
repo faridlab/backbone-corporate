@@ -32,5 +32,3 @@ pub type TermsAndConditionsService = GenericCrudService<
     TermsAndConditionsRepository,
 >;
 
-// <<< CUSTOM
-// END CUSTOM

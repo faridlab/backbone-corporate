@@ -1,0 +1,117 @@
+//! The extension of `services.rs` (hand-written; ADR-0031).
+
+#[allow(unused_imports)]
+use super::*;
+
+// Add custom public services here
+use super::super::types::{Converted, RegisterRate, SpotRate};
+use crate::application::service::fx_service::NewRate;
+use crate::application::service::FxService;
+use crate::domain::entity::RateType;
+use anyhow::Result;
+use async_trait::async_trait;
+use chrono::NaiveDate;
+use rust_decimal::Decimal;
+use std::sync::Arc;
+use uuid::Uuid;
+
+/// The published FX contract. Sibling modules program against THIS trait — not
+/// `application::service::fx_service` — so the engine's internals are free to
+/// change behind a stable surface. Returns `anyhow::Result`; the application's
+/// typed `FxError` is mapped to `anyhow::Error` at the boundary (consumers that
+/// need to distinguish NoRate etc. should call through the HTTP layer, which
+/// maps the typed error to status codes).
+#[async_trait]
+pub trait CorporateFxPort: Send + Sync {
+    /// Convert `amount` from -> to at the rate effective on `on_date`, rounded
+    /// to the quote currency's minor-unit precision. Same-currency is identity.
+    async fn convert(
+        &self,
+        amount: Decimal,
+        from: &str,
+        to: &str,
+        on_date: NaiveDate,
+    ) -> Result<Converted>;
+
+    /// Read the spot rate in force for a directed pair at (or immediately
+    /// before) `on_or_before` — a raw rate read (no amount, no rounding, no
+    /// inverse fallback). Refuses when no window covers the date.
+    async fn spot_on_or_before(
+        &self,
+        from: &str,
+        to: &str,
+        on_or_before: NaiveDate,
+    ) -> Result<SpotRate>;
+
+    /// Register a directed, effective-dated rate, rejecting a window that
+    /// overlaps an existing one for the same pair. Rates are shared reference
+    /// data (one table-wide rate per directed pair). Returns the new rate row id.
+    async fn register_rate(&self, rate: RegisterRate) -> Result<Uuid>;
+}
+
+/// Adapter that satisfies [`CorporateFxPort`] by delegating to the hand-authored
+/// [`FxService`]. Constructed by `CorporateModule::fx_port()`.
+pub struct CorporateFxServiceImpl {
+    inner: Arc<FxService>,
+}
+
+impl CorporateFxServiceImpl {
+    pub fn new(inner: Arc<FxService>) -> Self {
+        Self { inner }
+    }
+}
+
+#[async_trait]
+impl CorporateFxPort for CorporateFxServiceImpl {
+    async fn convert(
+        &self,
+        amount: Decimal,
+        from: &str,
+        to: &str,
+        on_date: NaiveDate,
+    ) -> Result<Converted> {
+        let c = self
+            .inner
+            .convert(amount, from, to, on_date)
+            .await?;
+        Ok(Converted {
+            amount: c.amount,
+            rate: c.rate,
+            rate_id: c.rate_id,
+            rate_date: c.rate_date,
+            inverse: c.inverse,
+        })
+    }
+
+    async fn spot_on_or_before(
+        &self,
+        from: &str,
+        to: &str,
+        on_or_before: NaiveDate,
+    ) -> Result<SpotRate> {
+        let s = self
+            .inner
+            .spot_on_or_before(from, to, on_or_before)
+            .await?;
+        Ok(SpotRate {
+            rate: s.rate,
+            rate_id: s.rate_id,
+            effective_from: s.effective_from,
+        })
+    }
+
+    async fn register_rate(&self, r: RegisterRate) -> Result<Uuid> {
+        self.inner
+            .upsert_rate(NewRate {
+                from_currency: r.from,
+                to_currency: r.to,
+                rate: r.rate,
+                effective_from: r.effective_from,
+                effective_to: r.effective_to,
+                rate_type: r.rate_type.unwrap_or(RateType::Spot),
+                source: r.source,
+            })
+            .await
+            .map_err(Into::into)
+    }
+}

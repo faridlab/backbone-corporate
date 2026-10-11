@@ -32,5 +32,3 @@ pub type IncotermService = GenericCrudService<
     IncotermRepository,
 >;
 
-// <<< CUSTOM
-// END CUSTOM

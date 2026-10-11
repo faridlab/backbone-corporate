@@ -32,5 +32,3 @@ pub type TerritoryService = GenericCrudService<
     TerritoryRepository,
 >;
 
-// <<< CUSTOM
-// END CUSTOM

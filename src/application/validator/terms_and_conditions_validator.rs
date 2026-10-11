@@ -18,9 +18,5 @@ pub fn terms_and_conditions_validator() -> TermsAndConditionsValidator {
         .rule(RequiredString::new("code", |e: &TermsAndConditions| &e.code))
         .rule(RequiredString::new("title", |e: &TermsAndConditions| &e.title))
         .rule(RequiredString::new("body", |e: &TermsAndConditions| &e.body))
-    // <<< CUSTOM RULES
-    // END CUSTOM RULES
 }
 
-// <<< CUSTOM
-// END CUSTOM

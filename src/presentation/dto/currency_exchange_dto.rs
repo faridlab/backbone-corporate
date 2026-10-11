@@ -306,7 +306,7 @@ impl backbone_core::ApplyUpdateDto<UpdateCurrencyExchangeDto> for CurrencyExchan
 // Custom DTOs
 // =============================================================================
 
-// <<< CUSTOM DTOs
 // Add custom DTOs specific to CurrencyExchange here.
 // This section will be preserved during regeneration.
 // >>> END CUSTOM DTOs
+

@@ -101,6 +101,4 @@ mod tests {
 // CUSTOM TESTS
 // ============================================================================
 
-// <<< CUSTOM TESTS START >>>
 // Add Incoterm specific tests here
-// <<< CUSTOM TESTS END >>>

@@ -27,6 +27,16 @@ pub mod exports;
 // <<< CUSTOM MODULES
 // END CUSTOM
 
+// The module's extension (hand-written; ADR-0031).
+#[path = "lib.ext.rs"]
+mod lib_ext;
+pub use lib_ext::*;
+/// This crate's module and builder under fixed names, for the extension's `impl` blocks.
+#[allow(dead_code)]
+pub(crate) type ThisModule = CorporateModule;
+#[allow(dead_code)]
+pub(crate) type ThisModuleBuilder = CorporateModuleBuilder;
+
 // Re-exports for convenience - Domain entities
 pub use domain::entity::*;
 
@@ -65,9 +75,39 @@ pub struct CorporateModule {
     pub(crate) incoterm_service: Arc<IncotermService>,
     pub(crate) terms_and_conditions_service: Arc<TermsAndConditionsService>,
     pub(crate) territory_service: Arc<TerritoryService>,
+    /// The module's extension state (`lib.ext.rs`); its fields read through `Deref`.
+    pub(crate) ext: ModuleExt,
     // <<< CUSTOM FIELDS
-    pub(crate) fx_service: Arc<crate::application::service::FxService>,
     // END CUSTOM
+}
+
+impl std::ops::Deref for CorporateModule {
+    type Target = ModuleExt;
+    fn deref(&self) -> &Self::Target {
+        &self.ext
+    }
+}
+
+impl std::ops::DerefMut for CorporateModule {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.ext
+    }
+}
+
+/// What the extension's `build` hook receives from the generated build (ADR-0031).
+#[allow(dead_code)]
+pub(crate) struct ModuleParts<'a> {
+    pub(crate) db_pool: &'a PgPool,
+    pub(crate) currency_service: &'a Arc<CurrencyService>,
+    pub(crate) currency_repository: &'a Arc<CurrencyRepository>,
+    pub(crate) currency_exchange_service: &'a Arc<CurrencyExchangeService>,
+    pub(crate) currency_exchange_repository: &'a Arc<CurrencyExchangeRepository>,
+    pub(crate) incoterm_service: &'a Arc<IncotermService>,
+    pub(crate) incoterm_repository: &'a Arc<IncotermRepository>,
+    pub(crate) terms_and_conditions_service: &'a Arc<TermsAndConditionsService>,
+    pub(crate) terms_and_conditions_repository: &'a Arc<TermsAndConditionsRepository>,
+    pub(crate) territory_service: &'a Arc<TerritoryService>,
+    pub(crate) territory_repository: &'a Arc<TerritoryRepository>,
 }
 
 impl CorporateModule {
@@ -137,8 +177,23 @@ impl CorporateModule {
 /// Builder for CorporateModule
 pub struct CorporateModuleBuilder {
     db_pool: Option<PgPool>,
+    /// The builder's extension state (`lib.ext.rs`); its fields read through `Deref`.
+    ext: ModuleBuilderExt,
     // <<< CUSTOM BUILDER FIELDS
     // END CUSTOM
+}
+
+impl std::ops::Deref for CorporateModuleBuilder {
+    type Target = ModuleBuilderExt;
+    fn deref(&self) -> &Self::Target {
+        &self.ext
+    }
+}
+
+impl std::ops::DerefMut for CorporateModuleBuilder {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.ext
+    }
 }
 
 impl CorporateModuleBuilder {
@@ -146,6 +201,7 @@ impl CorporateModuleBuilder {
     pub fn new() -> Self {
         Self {
             db_pool: None,
+            ext: Default::default(),
             // <<< CUSTOM BUILDER DEFAULTS
             // END CUSTOM
         }
@@ -186,10 +242,22 @@ impl CorporateModuleBuilder {
         let territory_service = Arc::new(TerritoryService::with_repository(territory_repository.clone()));
 
         // <<< CUSTOM
-        // FX engine (user-owned; survives regen). Constructed from the same pool
-        // as the CRUD services. Exposed to siblings via CorporateFxPort.
-        let fx_service = Arc::new(crate::application::service::FxService::new(db_pool.clone()));
         // END CUSTOM
+
+        // The extension builds its own state from what the generated build made.
+        let ext = self.ext.build(&ModuleParts {
+            db_pool: &db_pool,
+            currency_service: &currency_service,
+            currency_repository: &currency_repository,
+            currency_exchange_service: &currency_exchange_service,
+            currency_exchange_repository: &currency_exchange_repository,
+            incoterm_service: &incoterm_service,
+            incoterm_repository: &incoterm_repository,
+            terms_and_conditions_service: &terms_and_conditions_service,
+            terms_and_conditions_repository: &terms_and_conditions_repository,
+            territory_service: &territory_service,
+            territory_repository: &territory_repository,
+        })?;
 
         Ok(CorporateModule {
             currency_service,
@@ -197,8 +265,8 @@ impl CorporateModuleBuilder {
             incoterm_service,
             terms_and_conditions_service,
             territory_service,
+            ext,
             // <<< CUSTOM
-            fx_service,
             // END CUSTOM
         })
     }

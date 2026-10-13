@@ -214,6 +214,9 @@ impl backbone_orm::EntityRepoMeta for Territory {
     fn search_fields() -> &'static [&'static str] {
         &["code", "name"]
     }
+    fn relations() -> &'static [(&'static str, &'static str, &'static str)] {
+        &[("parent", "territories", "parentId")]
+    }
 }
 
 /// Builder for Territory entity

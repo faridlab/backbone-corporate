@@ -56,7 +56,7 @@ impl backbone_core::write_guard::WriteGuard<Currency> for CurrencyRowRules {
         };
         let row = &row;
         let old = ctx.before.and_then(|b| serde_json::to_value(b).ok());
-        let mut shadow = Vec::new();
+        let shadow = Vec::new();
         let mut refuse = Vec::new();
         // `iso_code_required` (@required on Currency.iso_code)
         if (create || (update && r::changed(old.as_ref(), row, &["iso_code"]))) && !r::holds(&r::and(r::is_not_null(r::field(row, "iso_code")), r::not(r::is_empty(r::trim(r::field(row, "iso_code")))))) {
@@ -64,7 +64,7 @@ impl backbone_core::write_guard::WriteGuard<Currency> for CurrencyRowRules {
         }
         // `iso_code_max_length` (@max(3) on Currency.iso_code)
         if (create || (update && r::changed(old.as_ref(), row, &["iso_code"]))) && !r::holds(&r::le(r::length(r::field(row, "iso_code")), r::Val::Num(3.0_f64))) {
-            shadow.push(Violation::new("iso_code", "max_length", "iso_code must be at most 3 characters").with_param("max", 3_i64));
+            refuse.push(Violation::new("iso_code", "max_length", "iso_code must be at most 3 characters").with_param("max", 3_i64));
         }
         // `name_required` (@required on Currency.name)
         if (create || (update && r::changed(old.as_ref(), row, &["name"]))) && !r::holds(&r::and(r::is_not_null(r::field(row, "name")), r::not(r::is_empty(r::trim(r::field(row, "name")))))) {
@@ -72,11 +72,11 @@ impl backbone_core::write_guard::WriteGuard<Currency> for CurrencyRowRules {
         }
         // `name_max_length` (@max(80) on Currency.name)
         if (create || (update && r::changed(old.as_ref(), row, &["name"]))) && !r::holds(&r::le(r::length(r::field(row, "name")), r::Val::Num(80.0_f64))) {
-            shadow.push(Violation::new("name", "max_length", "name must be at most 80 characters").with_param("max", 80_i64));
+            refuse.push(Violation::new("name", "max_length", "name must be at most 80 characters").with_param("max", 80_i64));
         }
         // `symbol_max_length` (@max(8) on Currency.symbol)
         if (create || (update && r::changed(old.as_ref(), row, &["symbol"]))) && !r::holds(&r::le(r::length(r::field(row, "symbol")), r::Val::Num(8.0_f64))) {
-            shadow.push(Violation::new("symbol", "max_length", "symbol must be at most 8 characters").with_param("max", 8_i64));
+            refuse.push(Violation::new("symbol", "max_length", "symbol must be at most 8 characters").with_param("max", 8_i64));
         }
         GuardOutcome { refuse, shadow }
     }

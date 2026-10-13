@@ -56,7 +56,7 @@ impl backbone_core::write_guard::WriteGuard<TermsAndConditions> for TermsAndCond
         };
         let row = &row;
         let old = ctx.before.and_then(|b| serde_json::to_value(b).ok());
-        let mut shadow = Vec::new();
+        let shadow = Vec::new();
         let mut refuse = Vec::new();
         // `code_required` (@required on TermsAndConditions.code)
         if (create || (update && r::changed(old.as_ref(), row, &["code"]))) && !r::holds(&r::and(r::is_not_null(r::field(row, "code")), r::not(r::is_empty(r::trim(r::field(row, "code")))))) {
@@ -64,7 +64,7 @@ impl backbone_core::write_guard::WriteGuard<TermsAndConditions> for TermsAndCond
         }
         // `code_max_length` (@max(40) on TermsAndConditions.code)
         if (create || (update && r::changed(old.as_ref(), row, &["code"]))) && !r::holds(&r::le(r::length(r::field(row, "code")), r::Val::Num(40.0_f64))) {
-            shadow.push(Violation::new("code", "max_length", "code must be at most 40 characters").with_param("max", 40_i64));
+            refuse.push(Violation::new("code", "max_length", "code must be at most 40 characters").with_param("max", 40_i64));
         }
         // `title_required` (@required on TermsAndConditions.title)
         if (create || (update && r::changed(old.as_ref(), row, &["title"]))) && !r::holds(&r::and(r::is_not_null(r::field(row, "title")), r::not(r::is_empty(r::trim(r::field(row, "title")))))) {
@@ -72,7 +72,7 @@ impl backbone_core::write_guard::WriteGuard<TermsAndConditions> for TermsAndCond
         }
         // `title_max_length` (@max(150) on TermsAndConditions.title)
         if (create || (update && r::changed(old.as_ref(), row, &["title"]))) && !r::holds(&r::le(r::length(r::field(row, "title")), r::Val::Num(150.0_f64))) {
-            shadow.push(Violation::new("title", "max_length", "title must be at most 150 characters").with_param("max", 150_i64));
+            refuse.push(Violation::new("title", "max_length", "title must be at most 150 characters").with_param("max", 150_i64));
         }
         // `body_required` (@required on TermsAndConditions.body)
         if (create || (update && r::changed(old.as_ref(), row, &["body"]))) && !r::holds(&r::and(r::is_not_null(r::field(row, "body")), r::not(r::is_empty(r::trim(r::field(row, "body")))))) {
@@ -80,7 +80,7 @@ impl backbone_core::write_guard::WriteGuard<TermsAndConditions> for TermsAndCond
         }
         // `body_max_length` (@max(8000) on TermsAndConditions.body)
         if (create || (update && r::changed(old.as_ref(), row, &["body"]))) && !r::holds(&r::le(r::length(r::field(row, "body")), r::Val::Num(8000.0_f64))) {
-            shadow.push(Violation::new("body", "max_length", "body must be at most 8000 characters").with_param("max", 8000_i64));
+            refuse.push(Violation::new("body", "max_length", "body must be at most 8000 characters").with_param("max", 8000_i64));
         }
         GuardOutcome { refuse, shadow }
     }

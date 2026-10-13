@@ -56,7 +56,7 @@ impl backbone_core::write_guard::WriteGuard<CurrencyExchange> for CurrencyExchan
         };
         let row = &row;
         let old = ctx.before.and_then(|b| serde_json::to_value(b).ok());
-        let mut shadow = Vec::new();
+        let shadow = Vec::new();
         let mut refuse = Vec::new();
         // `from_currency_required` (@required on CurrencyExchange.from_currency)
         if (create || (update && r::changed(old.as_ref(), row, &["from_currency"]))) && !r::holds(&r::and(r::is_not_null(r::field(row, "from_currency")), r::not(r::is_empty(r::trim(r::field(row, "from_currency")))))) {
@@ -64,7 +64,7 @@ impl backbone_core::write_guard::WriteGuard<CurrencyExchange> for CurrencyExchan
         }
         // `from_currency_max_length` (@max(3) on CurrencyExchange.from_currency)
         if (create || (update && r::changed(old.as_ref(), row, &["from_currency"]))) && !r::holds(&r::le(r::length(r::field(row, "from_currency")), r::Val::Num(3.0_f64))) {
-            shadow.push(Violation::new("from_currency", "max_length", "from_currency must be at most 3 characters").with_param("max", 3_i64));
+            refuse.push(Violation::new("from_currency", "max_length", "from_currency must be at most 3 characters").with_param("max", 3_i64));
         }
         // `to_currency_required` (@required on CurrencyExchange.to_currency)
         if (create || (update && r::changed(old.as_ref(), row, &["to_currency"]))) && !r::holds(&r::and(r::is_not_null(r::field(row, "to_currency")), r::not(r::is_empty(r::trim(r::field(row, "to_currency")))))) {
@@ -72,15 +72,15 @@ impl backbone_core::write_guard::WriteGuard<CurrencyExchange> for CurrencyExchan
         }
         // `to_currency_max_length` (@max(3) on CurrencyExchange.to_currency)
         if (create || (update && r::changed(old.as_ref(), row, &["to_currency"]))) && !r::holds(&r::le(r::length(r::field(row, "to_currency")), r::Val::Num(3.0_f64))) {
-            shadow.push(Violation::new("to_currency", "max_length", "to_currency must be at most 3 characters").with_param("max", 3_i64));
+            refuse.push(Violation::new("to_currency", "max_length", "to_currency must be at most 3 characters").with_param("max", 3_i64));
         }
         // `rate_non_negative` (@non_negative on CurrencyExchange.rate)
         if (create || (update && r::changed(old.as_ref(), row, &["rate"]))) && !r::holds(&r::ge(r::field(row, "rate"), r::Val::Num(0.0_f64))) {
-            shadow.push(Violation::new("rate", "non_negative", "rate must not be negative"));
+            refuse.push(Violation::new("rate", "non_negative", "rate must not be negative"));
         }
         // `source_max_length` (@max(60) on CurrencyExchange.source)
         if (create || (update && r::changed(old.as_ref(), row, &["source"]))) && !r::holds(&r::le(r::length(r::field(row, "source")), r::Val::Num(60.0_f64))) {
-            shadow.push(Violation::new("source", "max_length", "source must be at most 60 characters").with_param("max", 60_i64));
+            refuse.push(Violation::new("source", "max_length", "source must be at most 60 characters").with_param("max", 60_i64));
         }
         GuardOutcome { refuse, shadow }
     }

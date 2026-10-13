@@ -32,3 +32,57 @@ pub type CurrencyExchangeService = GenericCrudService<
     CurrencyExchangeRepository,
 >;
 
+/// The rules the schema declares for CurrencyExchange, checked against the row a create or update
+/// would store. The generated build attaches it to [`CurrencyExchangeService`]. A refusing rule's
+/// break answers 422; a rule in shadow is logged under `backbone::write_guard` and the
+/// write goes ahead.
+pub struct CurrencyExchangeRowRules;
+
+#[async_trait::async_trait]
+impl backbone_core::write_guard::WriteGuard<CurrencyExchange> for CurrencyExchangeRowRules {
+    async fn check(
+        &self,
+        ctx: &backbone_core::write_guard::WriteCtx<'_, CurrencyExchange>,
+    ) -> backbone_core::write_guard::GuardOutcome {
+        use backbone_core::row_rule as r;
+        use backbone_core::violation::Violation;
+        use backbone_core::write_guard::{GuardOutcome, WriteKind};
+        let (create, update) = (ctx.kind == WriteKind::Create, ctx.kind == WriteKind::Update);
+        let Some(after) = ctx.after.filter(|_| create || update) else {
+            return GuardOutcome::allow();
+        };
+        let Ok(row) = serde_json::to_value(after) else {
+            return GuardOutcome::allow();
+        };
+        let row = &row;
+        let old = ctx.before.and_then(|b| serde_json::to_value(b).ok());
+        let mut shadow = Vec::new();
+        let mut refuse = Vec::new();
+        // `from_currency_required` (@required on CurrencyExchange.from_currency)
+        if (create || (update && r::changed(old.as_ref(), row, &["from_currency"]))) && !r::holds(&r::and(r::is_not_null(r::field(row, "from_currency")), r::not(r::is_empty(r::trim(r::field(row, "from_currency")))))) {
+            refuse.push(Violation::new("from_currency", "required", "from_currency is required"));
+        }
+        // `from_currency_max_length` (@max(3) on CurrencyExchange.from_currency)
+        if (create || (update && r::changed(old.as_ref(), row, &["from_currency"]))) && !r::holds(&r::le(r::length(r::field(row, "from_currency")), r::Val::Num(3.0_f64))) {
+            shadow.push(Violation::new("from_currency", "max_length", "from_currency must be at most 3 characters").with_param("max", 3_i64));
+        }
+        // `to_currency_required` (@required on CurrencyExchange.to_currency)
+        if (create || (update && r::changed(old.as_ref(), row, &["to_currency"]))) && !r::holds(&r::and(r::is_not_null(r::field(row, "to_currency")), r::not(r::is_empty(r::trim(r::field(row, "to_currency")))))) {
+            refuse.push(Violation::new("to_currency", "required", "to_currency is required"));
+        }
+        // `to_currency_max_length` (@max(3) on CurrencyExchange.to_currency)
+        if (create || (update && r::changed(old.as_ref(), row, &["to_currency"]))) && !r::holds(&r::le(r::length(r::field(row, "to_currency")), r::Val::Num(3.0_f64))) {
+            shadow.push(Violation::new("to_currency", "max_length", "to_currency must be at most 3 characters").with_param("max", 3_i64));
+        }
+        // `rate_non_negative` (@non_negative on CurrencyExchange.rate)
+        if (create || (update && r::changed(old.as_ref(), row, &["rate"]))) && !r::holds(&r::ge(r::field(row, "rate"), r::Val::Num(0.0_f64))) {
+            shadow.push(Violation::new("rate", "non_negative", "rate must not be negative"));
+        }
+        // `source_max_length` (@max(60) on CurrencyExchange.source)
+        if (create || (update && r::changed(old.as_ref(), row, &["source"]))) && !r::holds(&r::le(r::length(r::field(row, "source")), r::Val::Num(60.0_f64))) {
+            shadow.push(Violation::new("source", "max_length", "source must be at most 60 characters").with_param("max", 60_i64));
+        }
+        GuardOutcome { refuse, shadow }
+    }
+}
+

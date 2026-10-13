@@ -19,6 +19,11 @@ pub use currency_exchange_service::CurrencyExchangeService;
 pub use incoterm_service::IncotermService;
 pub use terms_and_conditions_service::TermsAndConditionsService;
 pub use territory_service::TerritoryService;
+pub use currency_service::CurrencyRowRules;
+pub use currency_exchange_service::CurrencyExchangeRowRules;
+pub use incoterm_service::IncotermRowRules;
+pub use terms_and_conditions_service::TermsAndConditionsRowRules;
+pub use territory_service::TerritoryRowRules;
 
 // This directory's extension (hand-written; ADR-0031).
 include!("mod.ext.rs");

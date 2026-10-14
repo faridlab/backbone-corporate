@@ -208,23 +208,23 @@ impl CorporateModuleBuilder {
 
         // Currency service
         let currency_repository = Arc::new(CurrencyRepository::new(db_pool.clone()));
-        let currency_service = Arc::new(CurrencyService::with_repository(currency_repository.clone()).with_guard(Arc::new(crate::application::service::CurrencyRowRules)));
+        let currency_service = Arc::new(crate::application::service::build_currency_service(currency_repository.clone()));
 
         // CurrencyExchange service
         let currency_exchange_repository = Arc::new(CurrencyExchangeRepository::new(db_pool.clone()));
-        let currency_exchange_service = Arc::new(CurrencyExchangeService::with_repository(currency_exchange_repository.clone()).with_guard(Arc::new(crate::application::service::CurrencyExchangeRowRules)));
+        let currency_exchange_service = Arc::new(crate::application::service::build_currency_exchange_service(currency_exchange_repository.clone()));
 
         // Incoterm service
         let incoterm_repository = Arc::new(IncotermRepository::new(db_pool.clone()));
-        let incoterm_service = Arc::new(IncotermService::with_repository(incoterm_repository.clone()).with_guard(Arc::new(crate::application::service::IncotermRowRules)));
+        let incoterm_service = Arc::new(crate::application::service::build_incoterm_service(incoterm_repository.clone()));
 
         // TermsAndConditions service
         let terms_and_conditions_repository = Arc::new(TermsAndConditionsRepository::new(db_pool.clone()));
-        let terms_and_conditions_service = Arc::new(TermsAndConditionsService::with_repository(terms_and_conditions_repository.clone()).with_guard(Arc::new(crate::application::service::TermsAndConditionsRowRules)));
+        let terms_and_conditions_service = Arc::new(crate::application::service::build_terms_and_conditions_service(terms_and_conditions_repository.clone()));
 
         // Territory service
         let territory_repository = Arc::new(TerritoryRepository::new(db_pool.clone()));
-        let territory_service = Arc::new(TerritoryService::with_repository(territory_repository.clone()).with_guard(Arc::new(crate::application::service::TerritoryRowRules)));
+        let territory_service = Arc::new(crate::application::service::build_territory_service(territory_repository.clone()));
 
 
         // The extension builds its own state from what the generated build made.

@@ -25,5 +25,45 @@ pub use incoterm_service::IncotermRowRules;
 pub use terms_and_conditions_service::TermsAndConditionsRowRules;
 pub use territory_service::TerritoryRowRules;
 
+/// A `CurrencyService` over `repository` with its write guard attached: the way to build it, so its writes are
+/// served only with the rules the schema declares.
+pub fn build_currency_service(
+    repository: std::sync::Arc<crate::infrastructure::persistence::CurrencyRepository>,
+) -> CurrencyService {
+    CurrencyService::with_repository(repository).with_guard(std::sync::Arc::new(CurrencyRowRules))
+}
+
+/// A `CurrencyExchangeService` over `repository` with its write guard attached: the way to build it, so its writes are
+/// served only with the rules the schema declares.
+pub fn build_currency_exchange_service(
+    repository: std::sync::Arc<crate::infrastructure::persistence::CurrencyExchangeRepository>,
+) -> CurrencyExchangeService {
+    CurrencyExchangeService::with_repository(repository).with_guard(std::sync::Arc::new(CurrencyExchangeRowRules))
+}
+
+/// A `IncotermService` over `repository` with its write guard attached: the way to build it, so its writes are
+/// served only with the rules the schema declares.
+pub fn build_incoterm_service(
+    repository: std::sync::Arc<crate::infrastructure::persistence::IncotermRepository>,
+) -> IncotermService {
+    IncotermService::with_repository(repository).with_guard(std::sync::Arc::new(IncotermRowRules))
+}
+
+/// A `TermsAndConditionsService` over `repository` with its write guard attached: the way to build it, so its writes are
+/// served only with the rules the schema declares.
+pub fn build_terms_and_conditions_service(
+    repository: std::sync::Arc<crate::infrastructure::persistence::TermsAndConditionsRepository>,
+) -> TermsAndConditionsService {
+    TermsAndConditionsService::with_repository(repository).with_guard(std::sync::Arc::new(TermsAndConditionsRowRules))
+}
+
+/// A `TerritoryService` over `repository` with its write guard attached: the way to build it, so its writes are
+/// served only with the rules the schema declares.
+pub fn build_territory_service(
+    repository: std::sync::Arc<crate::infrastructure::persistence::TerritoryRepository>,
+) -> TerritoryService {
+    TerritoryService::with_repository(repository).with_guard(std::sync::Arc::new(TerritoryRowRules))
+}
+
 // This directory's extension (hand-written; ADR-0031).
 include!("mod.ext.rs");

@@ -80,6 +80,13 @@ impl axum::response::IntoResponse for IncotermError {
 // Route Configuration
 // =============================================================================
 
+/// The permissions this entity's generic routes require: `incoterm:<action>` for `read`, `create`,
+/// `update`, `delete`, `restore` and `purge`, with any rename the schema's `requires:` declares.
+pub fn incoterm_permissions() -> backbone_core::http::CrudPermissions {
+    backbone_core::http::CrudPermissions::new("incoterm")
+        .in_module("corporate")
+}
+
 /// Create Axum router with all 16 Backbone endpoints for Incoterm.
 ///
 /// # Routes
@@ -109,21 +116,23 @@ impl axum::response::IntoResponse for IncotermError {
 /// let router = create_incoterm_routes(service);
 /// ```
 pub fn create_incoterm_routes(service: Arc<IncotermService>) -> Router {
-    BackboneCrudHandler::<IncotermService, Incoterm, CreateIncotermDto, UpdateIncotermDto, IncotermResponseDto>::routes(
+    BackboneCrudHandler::<IncotermService, Incoterm, CreateIncotermDto, UpdateIncotermDto, IncotermResponseDto>::routes_guarded(
         service,
         "/incoterms",
+        incoterm_permissions(),
     )
 }
 
 /// Create Axum router with only the read (GET) endpoints for Incoterm.
 ///
-/// Safe for public, unauthenticated exposure (e.g., reference data).
+/// Each route requires the entity's `read` permission, so it needs an authenticated caller.
 /// Mutations must be served separately via `create_incoterm_write_routes`,
 /// typically wrapped in an auth middleware layer.
 pub fn create_incoterm_read_routes(service: Arc<IncotermService>) -> Router {
-    BackboneCrudHandler::<IncotermService, Incoterm, CreateIncotermDto, UpdateIncotermDto, IncotermResponseDto>::read_routes(
+    BackboneCrudHandler::<IncotermService, Incoterm, CreateIncotermDto, UpdateIncotermDto, IncotermResponseDto>::read_routes_guarded(
         service,
         "/incoterms",
+        incoterm_permissions(),
     )
 }
 
@@ -139,9 +148,10 @@ pub fn create_incoterm_read_routes(service: Arc<IncotermService>) -> Router {
 /// service (e.g. a command router over its domain engine), serve THAT instead
 /// for any mutation that must respect domain rules.
 pub fn create_incoterm_write_routes(service: Arc<IncotermService>) -> Router {
-    BackboneCrudHandler::<IncotermService, Incoterm, CreateIncotermDto, UpdateIncotermDto, IncotermResponseDto>::write_routes(
+    BackboneCrudHandler::<IncotermService, Incoterm, CreateIncotermDto, UpdateIncotermDto, IncotermResponseDto>::write_routes_guarded(
         service,
         "/incoterms",
+        incoterm_permissions(),
     )
 }
 

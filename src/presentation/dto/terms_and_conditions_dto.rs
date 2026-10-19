@@ -35,7 +35,12 @@ pub struct CreateTermsAndConditionsDto {
     pub title: String,
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     pub body: String,
+    #[serde(default = "default_create_terms_and_conditions_status")]
     pub status: TermsAndConditionsStatus,
+}
+
+fn default_create_terms_and_conditions_status() -> TermsAndConditionsStatus {
+    TermsAndConditionsStatus::Active
 }
 
 // =============================================================================
@@ -246,12 +251,4 @@ impl backbone_core::ApplyUpdateDto<UpdateTermsAndConditionsDto> for TermsAndCond
         Ok(self)
     }
 }
-
-// =============================================================================
-// Custom DTOs
-// =============================================================================
-
-// Add custom DTOs specific to TermsAndConditions here.
-// This section will be preserved during regeneration.
-// >>> END CUSTOM DTOs
 

@@ -13,8 +13,8 @@ pub mod territory_handler;
 
 
 // Re-exports
-pub use currency_handler::{create_currency_routes, create_currency_read_routes, create_currency_write_routes};
-pub use currency_exchange_handler::{create_currency_exchange_routes, create_currency_exchange_read_routes, create_currency_exchange_write_routes};
-pub use incoterm_handler::{create_incoterm_routes, create_incoterm_read_routes, create_incoterm_write_routes};
-pub use terms_and_conditions_handler::{create_terms_and_conditions_routes, create_terms_and_conditions_read_routes, create_terms_and_conditions_write_routes};
-pub use territory_handler::{create_territory_routes, create_territory_read_routes, create_territory_write_routes};
+pub use currency_handler::{create_currency_routes, create_currency_read_routes, create_currency_write_routes, currency_permissions};
+pub use currency_exchange_handler::{create_currency_exchange_routes, create_currency_exchange_read_routes, create_currency_exchange_write_routes, currency_exchange_permissions};
+pub use incoterm_handler::{create_incoterm_routes, create_incoterm_read_routes, create_incoterm_write_routes, incoterm_permissions};
+pub use terms_and_conditions_handler::{create_terms_and_conditions_routes, create_terms_and_conditions_read_routes, create_terms_and_conditions_write_routes, terms_and_conditions_permissions};
+pub use territory_handler::{create_territory_routes, create_territory_read_routes, create_territory_write_routes, territory_permissions};

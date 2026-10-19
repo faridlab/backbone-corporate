@@ -42,10 +42,14 @@ pub struct CreateCurrencyExchangeDto {
     pub effective_from: NaiveDate,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "effective_to")]
     pub effective_to: Option<NaiveDate>,
-    #[serde(alias = "rate_type")]
+    #[serde(default = "default_create_currency_exchange_rate_type", alias = "rate_type")]
     pub rate_type: RateType,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub source: Option<String>,
+}
+
+fn default_create_currency_exchange_rate_type() -> RateType {
+    RateType::Spot
 }
 
 // =============================================================================
@@ -101,12 +105,12 @@ pub struct PatchCurrencyExchangeDto {
     #[cfg_attr(feature = "openapi", schema(example = "2024-01-01"))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "effective_from")]
     pub effective_from: Option<NaiveDate>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "effective_to")]
-    pub effective_to: Option<NaiveDate>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "effective_to")]
+    pub effective_to: Option<Option<NaiveDate>>,
     #[serde(skip_serializing_if = "Option::is_none", alias = "rate_type")]
     pub rate_type: Option<RateType>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub source: Option<String>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option")]
+    pub source: Option<Option<String>>,
 }
 
 impl PatchCurrencyExchangeDto {
@@ -286,12 +290,4 @@ impl backbone_core::ApplyUpdateDto<UpdateCurrencyExchangeDto> for CurrencyExchan
         Ok(self)
     }
 }
-
-// =============================================================================
-// Custom DTOs
-// =============================================================================
-
-// Add custom DTOs specific to CurrencyExchange here.
-// This section will be preserved during regeneration.
-// >>> END CUSTOM DTOs
 

@@ -176,6 +176,12 @@ impl super::Entity for Territory {
 }
 
 impl backbone_core::PersistentEntity for Territory {
+    fn references() -> &'static [backbone_core::Reference] {
+        const REFERENCES: &[backbone_core::Reference] = &[
+            backbone_core::Reference::new("parent_id", "corporate.territories", "id"),
+        ];
+        REFERENCES
+    }
     fn entity_id(&self) -> String {
         self.id.to_string()
     }

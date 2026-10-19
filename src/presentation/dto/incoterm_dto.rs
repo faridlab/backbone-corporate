@@ -33,7 +33,12 @@ pub struct CreateIncotermDto {
     pub code: String,
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     pub name: String,
+    #[serde(default = "default_create_incoterm_status")]
     pub status: IncotermStatus,
+}
+
+fn default_create_incoterm_status() -> IncotermStatus {
+    IncotermStatus::Active
 }
 
 // =============================================================================
@@ -233,12 +238,4 @@ impl backbone_core::ApplyUpdateDto<UpdateIncotermDto> for Incoterm {
         Ok(self)
     }
 }
-
-// =============================================================================
-// Custom DTOs
-// =============================================================================
-
-// Add custom DTOs specific to Incoterm here.
-// This section will be preserved during regeneration.
-// >>> END CUSTOM DTOs
 

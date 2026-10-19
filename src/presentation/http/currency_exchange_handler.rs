@@ -82,6 +82,13 @@ impl axum::response::IntoResponse for CurrencyExchangeError {
 // Route Configuration
 // =============================================================================
 
+/// The permissions this entity's generic routes require: `currency_exchange:<action>` for `read`, `create`,
+/// `update`, `delete`, `restore` and `purge`, with any rename the schema's `requires:` declares.
+pub fn currency_exchange_permissions() -> backbone_core::http::CrudPermissions {
+    backbone_core::http::CrudPermissions::new("currency_exchange")
+        .in_module("corporate")
+}
+
 /// Create Axum router with all 16 Backbone endpoints for CurrencyExchange.
 ///
 /// # Routes
@@ -111,21 +118,23 @@ impl axum::response::IntoResponse for CurrencyExchangeError {
 /// let router = create_currency_exchange_routes(service);
 /// ```
 pub fn create_currency_exchange_routes(service: Arc<CurrencyExchangeService>) -> Router {
-    BackboneCrudHandler::<CurrencyExchangeService, CurrencyExchange, CreateCurrencyExchangeDto, UpdateCurrencyExchangeDto, CurrencyExchangeResponseDto>::routes(
+    BackboneCrudHandler::<CurrencyExchangeService, CurrencyExchange, CreateCurrencyExchangeDto, UpdateCurrencyExchangeDto, CurrencyExchangeResponseDto>::routes_guarded(
         service,
         "/currency_exchanges",
+        currency_exchange_permissions(),
     )
 }
 
 /// Create Axum router with only the read (GET) endpoints for CurrencyExchange.
 ///
-/// Safe for public, unauthenticated exposure (e.g., reference data).
+/// Each route requires the entity's `read` permission, so it needs an authenticated caller.
 /// Mutations must be served separately via `create_currency_exchange_write_routes`,
 /// typically wrapped in an auth middleware layer.
 pub fn create_currency_exchange_read_routes(service: Arc<CurrencyExchangeService>) -> Router {
-    BackboneCrudHandler::<CurrencyExchangeService, CurrencyExchange, CreateCurrencyExchangeDto, UpdateCurrencyExchangeDto, CurrencyExchangeResponseDto>::read_routes(
+    BackboneCrudHandler::<CurrencyExchangeService, CurrencyExchange, CreateCurrencyExchangeDto, UpdateCurrencyExchangeDto, CurrencyExchangeResponseDto>::read_routes_guarded(
         service,
         "/currency_exchanges",
+        currency_exchange_permissions(),
     )
 }
 
@@ -141,9 +150,10 @@ pub fn create_currency_exchange_read_routes(service: Arc<CurrencyExchangeService
 /// service (e.g. a command router over its domain engine), serve THAT instead
 /// for any mutation that must respect domain rules.
 pub fn create_currency_exchange_write_routes(service: Arc<CurrencyExchangeService>) -> Router {
-    BackboneCrudHandler::<CurrencyExchangeService, CurrencyExchange, CreateCurrencyExchangeDto, UpdateCurrencyExchangeDto, CurrencyExchangeResponseDto>::write_routes(
+    BackboneCrudHandler::<CurrencyExchangeService, CurrencyExchange, CreateCurrencyExchangeDto, UpdateCurrencyExchangeDto, CurrencyExchangeResponseDto>::write_routes_guarded(
         service,
         "/currency_exchanges",
+        currency_exchange_permissions(),
     )
 }
 

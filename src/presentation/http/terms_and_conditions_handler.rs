@@ -80,6 +80,13 @@ impl axum::response::IntoResponse for TermsAndConditionsError {
 // Route Configuration
 // =============================================================================
 
+/// The permissions this entity's generic routes require: `terms_and_conditions:<action>` for `read`, `create`,
+/// `update`, `delete`, `restore` and `purge`, with any rename the schema's `requires:` declares.
+pub fn terms_and_conditions_permissions() -> backbone_core::http::CrudPermissions {
+    backbone_core::http::CrudPermissions::new("terms_and_conditions")
+        .in_module("corporate")
+}
+
 /// Create Axum router with all 16 Backbone endpoints for TermsAndConditions.
 ///
 /// # Routes
@@ -109,21 +116,23 @@ impl axum::response::IntoResponse for TermsAndConditionsError {
 /// let router = create_terms_and_conditions_routes(service);
 /// ```
 pub fn create_terms_and_conditions_routes(service: Arc<TermsAndConditionsService>) -> Router {
-    BackboneCrudHandler::<TermsAndConditionsService, TermsAndConditions, CreateTermsAndConditionsDto, UpdateTermsAndConditionsDto, TermsAndConditionsResponseDto>::routes(
+    BackboneCrudHandler::<TermsAndConditionsService, TermsAndConditions, CreateTermsAndConditionsDto, UpdateTermsAndConditionsDto, TermsAndConditionsResponseDto>::routes_guarded(
         service,
         "/terms_and_conditionses",
+        terms_and_conditions_permissions(),
     )
 }
 
 /// Create Axum router with only the read (GET) endpoints for TermsAndConditions.
 ///
-/// Safe for public, unauthenticated exposure (e.g., reference data).
+/// Each route requires the entity's `read` permission, so it needs an authenticated caller.
 /// Mutations must be served separately via `create_terms_and_conditions_write_routes`,
 /// typically wrapped in an auth middleware layer.
 pub fn create_terms_and_conditions_read_routes(service: Arc<TermsAndConditionsService>) -> Router {
-    BackboneCrudHandler::<TermsAndConditionsService, TermsAndConditions, CreateTermsAndConditionsDto, UpdateTermsAndConditionsDto, TermsAndConditionsResponseDto>::read_routes(
+    BackboneCrudHandler::<TermsAndConditionsService, TermsAndConditions, CreateTermsAndConditionsDto, UpdateTermsAndConditionsDto, TermsAndConditionsResponseDto>::read_routes_guarded(
         service,
         "/terms_and_conditionses",
+        terms_and_conditions_permissions(),
     )
 }
 
@@ -139,9 +148,10 @@ pub fn create_terms_and_conditions_read_routes(service: Arc<TermsAndConditionsSe
 /// service (e.g. a command router over its domain engine), serve THAT instead
 /// for any mutation that must respect domain rules.
 pub fn create_terms_and_conditions_write_routes(service: Arc<TermsAndConditionsService>) -> Router {
-    BackboneCrudHandler::<TermsAndConditionsService, TermsAndConditions, CreateTermsAndConditionsDto, UpdateTermsAndConditionsDto, TermsAndConditionsResponseDto>::write_routes(
+    BackboneCrudHandler::<TermsAndConditionsService, TermsAndConditions, CreateTermsAndConditionsDto, UpdateTermsAndConditionsDto, TermsAndConditionsResponseDto>::write_routes_guarded(
         service,
         "/terms_and_conditionses",
+        terms_and_conditions_permissions(),
     )
 }
 

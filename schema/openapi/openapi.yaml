@@ -1904,9 +1904,6 @@ components:
       required:
         - iso_code
         - name
-        - decimal_places
-        - status
-        - metadata
       properties:
         iso_code:
           type: string
@@ -1923,8 +1920,6 @@ components:
           format: int32
         status:
           type: string
-        metadata:
-          type: object
 
     UpdateCurrencyRequest:
       type: object
@@ -1933,7 +1928,6 @@ components:
         - name
         - decimal_places
         - status
-        - metadata
       properties:
         iso_code:
           type: string
@@ -1950,8 +1944,6 @@ components:
           format: int32
         status:
           type: string
-        metadata:
-          type: object
 
     PatchCurrencyRequest:
       type: object
@@ -1971,8 +1963,6 @@ components:
           format: int32
         status:
           type: string
-        metadata:
-          type: object
 
     CurrencyList:
       type: object
@@ -2042,8 +2032,6 @@ components:
         - to_currency
         - rate
         - effective_from
-        - rate_type
-        - metadata
       properties:
         from_currency:
           type: string
@@ -2066,8 +2054,6 @@ components:
           nullable: true
           type: string
           maxLength: 60
-        metadata:
-          type: object
 
     UpdateCurrencyExchangeRequest:
       type: object
@@ -2077,7 +2063,6 @@ components:
         - rate
         - effective_from
         - rate_type
-        - metadata
       properties:
         from_currency:
           type: string
@@ -2100,8 +2085,6 @@ components:
           nullable: true
           type: string
           maxLength: 60
-        metadata:
-          type: object
 
     PatchCurrencyExchangeRequest:
       type: object
@@ -2127,8 +2110,6 @@ components:
           nullable: true
           type: string
           maxLength: 60
-        metadata:
-          type: object
 
     CurrencyExchangeList:
       type: object
@@ -2181,8 +2162,6 @@ components:
       required:
         - code
         - name
-        - status
-        - metadata
       properties:
         code:
           type: string
@@ -2192,8 +2171,6 @@ components:
           maxLength: 120
         status:
           type: string
-        metadata:
-          type: object
 
     UpdateIncotermRequest:
       type: object
@@ -2201,7 +2178,6 @@ components:
         - code
         - name
         - status
-        - metadata
       properties:
         code:
           type: string
@@ -2211,8 +2187,6 @@ components:
           maxLength: 120
         status:
           type: string
-        metadata:
-          type: object
 
     PatchIncotermRequest:
       type: object
@@ -2225,8 +2199,6 @@ components:
           maxLength: 120
         status:
           type: string
-        metadata:
-          type: object
 
     IncotermList:
       type: object
@@ -2284,8 +2256,6 @@ components:
         - code
         - title
         - body
-        - status
-        - metadata
       properties:
         code:
           type: string
@@ -2298,8 +2268,6 @@ components:
           maxLength: 8000
         status:
           type: string
-        metadata:
-          type: object
 
     UpdateTermsAndConditionsRequest:
       type: object
@@ -2308,7 +2276,6 @@ components:
         - title
         - body
         - status
-        - metadata
       properties:
         code:
           type: string
@@ -2321,8 +2288,6 @@ components:
           maxLength: 8000
         status:
           type: string
-        metadata:
-          type: object
 
     PatchTermsAndConditionsRequest:
       type: object
@@ -2338,8 +2303,6 @@ components:
           maxLength: 8000
         status:
           type: string
-        metadata:
-          type: object
 
     TermsAndConditionsList:
       type: object
@@ -2396,8 +2359,6 @@ components:
       required:
         - code
         - name
-        - is_group
-        - metadata
       properties:
         code:
           type: string
@@ -2411,8 +2372,6 @@ components:
           format: uuid
         is_group:
           type: boolean
-        metadata:
-          type: object
 
     UpdateTerritoryRequest:
       type: object
@@ -2420,7 +2379,6 @@ components:
         - code
         - name
         - is_group
-        - metadata
       properties:
         code:
           type: string
@@ -2434,8 +2392,6 @@ components:
           format: uuid
         is_group:
           type: boolean
-        metadata:
-          type: object
 
     PatchTerritoryRequest:
       type: object
@@ -2452,8 +2408,6 @@ components:
           format: uuid
         is_group:
           type: boolean
-        metadata:
-          type: object
 
     TerritoryList:
       type: object

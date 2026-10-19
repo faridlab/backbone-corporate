@@ -37,9 +37,18 @@ pub struct CreateCurrencyDto {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub symbol: Option<String>,
     #[cfg_attr(feature = "openapi", schema(example = 42))]
-    #[serde(alias = "decimal_places")]
+    #[serde(default = "default_create_currency_decimal_places", alias = "decimal_places")]
     pub decimal_places: i32,
+    #[serde(default = "default_create_currency_status")]
     pub status: CurrencyStatus,
+}
+
+fn default_create_currency_decimal_places() -> i32 {
+    2
+}
+
+fn default_create_currency_status() -> CurrencyStatus {
+    CurrencyStatus::Active
 }
 
 // =============================================================================
@@ -85,8 +94,8 @@ pub struct PatchCurrencyDto {
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub symbol: Option<String>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option")]
+    pub symbol: Option<Option<String>>,
     #[cfg_attr(feature = "openapi", schema(example = 42))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "decimal_places")]
     pub decimal_places: Option<i32>,
@@ -261,12 +270,4 @@ impl backbone_core::ApplyUpdateDto<UpdateCurrencyDto> for Currency {
         Ok(self)
     }
 }
-
-// =============================================================================
-// Custom DTOs
-// =============================================================================
-
-// Add custom DTOs specific to Currency here.
-// This section will be preserved during regeneration.
-// >>> END CUSTOM DTOs
 

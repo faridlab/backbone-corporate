@@ -1,6 +1,6 @@
 [package]
 name = "backbone-corporate"
-version = "0.12.0"
+version = "0.12.1"
 edition = "2021"
 description = "Reference masters: Currency + CurrencyExchange (effective-dated FX), Territory, Incoterm, TermsAndConditions — the multi-currency prerequisite (posts NO GL)"
 license = "MIT OR Apache-2.0"
@@ -20,8 +20,8 @@ path = "src/lib.rs"
 # or `rev = "<commit-sha>"`. Cargo dedupes the git fetch — the repo is only
 # cloned once even though four crates reference it.
 # -----------------------------------------------------------------------------
-backbone-core = { version = "3.7.0", features = ["postgres"] }
-backbone-orm = { version = "3.0.0" }
+backbone-core = { version = "3.18.0", features = ["postgres"] }
+backbone-orm = { version = "3.18.0" }
 backbone-auth = { version = "3.0.0" }
 backbone-messaging = { version = "3.0.0" }
 
